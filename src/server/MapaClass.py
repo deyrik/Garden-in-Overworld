@@ -14,9 +14,9 @@ class Mapa:
         self.matriz = [[0 for i in range(self.coluna)] for j in range(self.linha)]
 
     # RF01 ----------------------------------------------------------------------------------------
-    #Para evitar que os elementros se sobreponham, 
+ 
     #é bom fazer na ordem oasis -> rios -> poças 
-
+    #Para evitar que os elementros se sobreponham,
     def inicializa_matriz(self):
         """constroi a matriz do mapa, onde cada posição é inicializada com o valor 0 (terra)."""
         for i in range(self.linha):
@@ -125,6 +125,15 @@ class Mapa:
                 # Garante que a poça não tente se espalhar para fora do mapa
                 linha = max(0, min(self.linha - 1, linha))
                 coluna = max(0, min(self.coluna - 1, coluna))
+
+    def gerar_mapa_aleatorio(self, num_oasis=6, 
+                             direcao='vertical', num_nascentes=3, prob_areia=0.4,
+                             num_pocas=10,tamanho_maximo_pocas=4):
+        """Gera um mapa completo com oásis, rios e poças."""
+        #self.inicializa_matriz()
+        self.gerar_oasis(num_oasis)
+        self.gerar_rio(direcao, num_nascentes, prob_areia)
+        self.gerar_pocas(num_pocas, tamanho_maximo_pocas)
 
     def exibe_matriz(self):
         """Exibe a matriz do mapa, mostrando o estado atual de cada posição."""
@@ -246,7 +255,51 @@ class Mapa:
             return True
         print("Ação inválida: Não é possível colher nessa posição.")
         return False  
+    #----------------------------------------------------------------------------------------------
+
+    # para enviar matriz
+    def tamanho_bytes(self):
+        """Calcula o tamanho total da matriz em bytes para determinar quantos pacotes serão necessários."""
+        # Cada inteiro na matriz pode ser representado por 1 byte (0-255), mas para segurança, vamos considerar 4 bytes por inteiro.
+        return self.linha * self.coluna * 4
+
+    def processar_pacote_matriz(self, pacote_json):
+        """
+        Recebe um dicionário JSON contendo uma parte da matriz e a anexa ao buffer.
+        Retorna a matriz completa quando todas as partes chegam, ou None caso contrário.
+        """
+        parte_atual = pacote_json.get("parte_atual")
+        total_partes = pacote_json.get("total_partes")
+        matriz_parcial = pacote_json.get("matriz_parcial")
+
+        # Se for o pacote número 1, garantimos que o buffer está limpo
+        if parte_atual == 1:
+            self.matriz_temporaria = []
+            self.partes_recebidas = 0
+
+        # O método .extend() pega as linhas fatiadas e adiciona no final da nossa lista principal
+        self.matriz_temporaria.extend(matriz_parcial)
+        self.partes_recebidas += 1
+
+        # Verifica se já montamos o quebra-cabeça inteiro
+        if self.partes_recebidas == total_partes:
+            print(f"Matriz montada com sucesso! Tamanho: {len(self.matriz_temporaria)} linhas.")
+            
+            # Salva a matriz pronta em uma variável final
+            matriz_pronta = self.matriz_temporaria
+            
+            # Limpa o buffer para a próxima vez que o servidor enviar uma atualização
+            self.matriz_temporaria = []
+            self.partes_recebidas = 0
+            
+            return matriz_pronta
+        
+        # Se ainda faltam partes (ex: recebeu a 1 de 4), retorna None e espera a próxima
+        return None
     
+
+
+
 #teste
 if __name__ == "__main__":
     mapa = Mapa()
