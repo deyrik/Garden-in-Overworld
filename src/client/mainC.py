@@ -20,6 +20,7 @@ if __name__ == "__main__":
     mapa_jogo = map.Mapa()
     mapa_jogo.linha = len(matriz_json)     # garantindo que o mapa do cliente vai ser do mesm tamango do server
     mapa_jogo.coluna = len(matriz_json[0])
+    mapa_jogo.matriz = matriz_json
     mapa_jogo.exibe_colorido()
 
 
