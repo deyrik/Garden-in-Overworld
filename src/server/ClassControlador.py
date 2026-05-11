@@ -14,7 +14,6 @@ class ControladorFazenda:
         self.gerenciador.remove_da_vaga(id_jogador)
 
     def gera_boas_vindas(self, id_jogador):
-        # Adicionado o comando RESPOSTA
         return json.dumps({"comando": "RESPOSTA", "status": "OK", "mensagem": f"BEM_VINDO: Jogador {id_jogador}"}) + "\n"
 
     def processa_mensagem(self, id_jogador, mensagem_str):
@@ -31,7 +30,6 @@ class ControladorFazenda:
         if comando_recebido == "NICKNAME":
             nome = dados.get("nome", "SemNome")
             self.gerenciador.slots[id_jogador].nick = nome
-            # Padronizado com comando RESPOSTA
             resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": f"Nickname atualizado para {nome}"}
 
         elif comando_recebido == "PLANTAR":
@@ -39,7 +37,6 @@ class ControladorFazenda:
             if self.mapa.plantar(x, y, semente):
                 resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Semente plantada"}
                 novo_valor = self.mapa.matriz[x][y]
-                # O broadcast já estava certinho!
                 dados_broadcast = {"comando": "ATUALIZAR_CELULA", "x": x, "y": y, "valor": novo_valor}
                 broadcast = json.dumps(dados_broadcast) + "\n"
             else:
@@ -59,7 +56,6 @@ class ControladorFazenda:
             resposta = {"comando": "ATUALIZAR_MAPA", "matriz": self.mapa.matriz}
 
         elif comando_recebido == "SAIR":
-            # Agora fica claro que é a resposta da ação de sair
             resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Desconectando..."}
 
         else:
