@@ -14,48 +14,55 @@ class ControladorFazenda:
         self.gerenciador.remove_da_vaga(id_jogador)
 
     def gera_boas_vindas(self, id_jogador):
-        return json.dumps({"status": "OK", "mensagem": f"BEM_VINDO: Jogador {id_jogador}"}) + "\n"
+        # Adicionado o comando RESPOSTA
+        return json.dumps({"comando": "RESPOSTA", "status": "OK", "mensagem": f"BEM_VINDO: Jogador {id_jogador}"}) + "\n"
 
     def processa_mensagem(self, id_jogador, mensagem_str):
-        """Recebe a string crua, executa a ação no jogo e retorna a string de resposta."""
-        
         print(f"[JOGO] Comando do Jogador {id_jogador}: {mensagem_str}")
         try:
             dados = json.loads(mensagem_str)
         except json.JSONDecodeError:
-            return json.dumps({"status": "ERRO", "mensagem": "JSON inválido"}) + "\n"
+            return json.dumps({"comando": "RESPOSTA", "status": "ERRO", "mensagem": "JSON inválido"}) + "\n", None
 
-        comando = str(dados.get("comando", "")).strip().upper()
+        comando_recebido = str(dados.get("comando", "")).strip().upper()
         resposta = {}
+        broadcast = None
 
-        if comando == "NICKNAME":
+        if comando_recebido == "NICKNAME":
             nome = dados.get("nome", "SemNome")
             self.gerenciador.slots[id_jogador].nick = nome
-            resposta = {"status": "OK", "mensagem": f"Nickname atualizado para {nome}"}
+            # Padronizado com comando RESPOSTA
+            resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": f"Nickname atualizado para {nome}"}
 
-        elif comando == "PLANTAR":
+        elif comando_recebido == "PLANTAR":
             semente, x, y = dados.get("semente"), dados.get("x"), dados.get("y")
             if self.mapa.plantar(x, y, semente):
-                resposta = {"status": "OK", "mensagem": "Semente plantada"}
-                # Extra: Você poderia adicionar a lógica de remover a semente do inventário do User aqui!
+                resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Semente plantada"}
+                novo_valor = self.mapa.matriz[x][y]
+                # O broadcast já estava certinho!
+                dados_broadcast = {"comando": "ATUALIZAR_CELULA", "x": x, "y": y, "valor": novo_valor}
+                broadcast = json.dumps(dados_broadcast) + "\n"
             else:
-                resposta = {"status": "ERRO", "mensagem": "Nao foi possivel plantar ai"}
+                resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": "Nao foi possivel plantar ai"}
 
-        elif comando == "COLHER":
+        elif comando_recebido == "COLHER":
             cultura, x, y = dados.get("cultura"), dados.get("x"), dados.get("y")
             if self.mapa.colher(x, y, cultura):
-                resposta = {"status": "OK", "mensagem": "Cultura colhida"}
-                # Extra: Você poderia adicionar a cultura colhida ao inventário do User aqui!
+                resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Cultura colhida"}
+                novo_valor = self.mapa.matriz[x][y]
+                dados_broadcast = {"comando": "ATUALIZAR_CELULA", "x": x, "y": y, "valor": novo_valor}
+                broadcast = json.dumps(dados_broadcast) + "\n"
             else:
-                resposta = {"status": "ERRO", "mensagem": "Nao foi possivel colher ai"}
+                resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": "Nao foi possivel colher ai"}
 
-        elif comando == "MATRIZ":
+        elif comando_recebido == "MATRIZ":
             resposta = {"comando": "ATUALIZAR_MAPA", "matriz": self.mapa.matriz}
 
-        elif comando == "SAIR":
-            resposta = {"comando": "SAIR", "status": "OK", "mensagem": "Desconectando..."}
+        elif comando_recebido == "SAIR":
+            # Agora fica claro que é a resposta da ação de sair
+            resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Desconectando..."}
 
         else:
-            resposta = {"status": "ERRO", "mensagem": "Comando desconhecido"}
+            resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": "Comando desconhecido"}
 
-        return json.dumps(resposta) + "\n"
+        return json.dumps(resposta) + "\n", broadcast
