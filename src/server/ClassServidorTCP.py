@@ -1,10 +1,6 @@
 import socket
 import threading
 
-#Adiciona lista de conexaos ativas 
-#adiciona funcao de broadcast para mandar mensagem pra todo mundo da lista de conexoes ativas
-#agora recebe o ID do jogador junto com a mensagem, para saber quem fez o que e mandar resposta só pra ele
-
 class ServidorTCP:
     """Lida estritamente com Sockets e Threads. Totalmente agnóstico ao jogo."""
     def __init__(self, host="localhost", port=12345, 
@@ -35,7 +31,6 @@ class ServidorTCP:
             client_socket, addr = self.server_socket.accept()
             print(f"[REDE] Conexão de {addr}")
             
-            #Pede permissão para colocar jogador na lista de jogadores e pega o ID com o Controlador
             id_jogador = self.ao_conectar()
 
             if id_jogador is not None:
@@ -47,7 +42,8 @@ class ServidorTCP:
 
     def enviar_broadcast(self, mensagem_str):
         """Pega a mensagem e atira para TODOS os sockets ativos no momento."""
-        # Usamos list() para evitar erros caso alguém desconecte bem na hora do loop
+        
+        #list() para evitar erros caso alguém desconecte bem na hora do loop
         for socket_cliente in list(self.conexoes_ativas.values()):
             try:
                 socket_cliente.sendall(mensagem_str.encode())
@@ -77,14 +73,14 @@ class ServidorTCP:
                     buffer_sobras = partes[1]
 
                     if mensagem_completa:
-                        # MODIFICADO: Agora o Controlador devolve DUAS variáveis!
+                        #o Controlador devolve DUAS variáveis!
                         resposta_str, broadcast_str = self.ao_receber_mensagem(id_jogador, mensagem_completa)
                         
                         #Manda o "OK" ou "ERRO" só pro cara que pediu
                         if resposta_str:
                             client_socket.sendall(resposta_str.encode())
                             
-                        #Se o controlador mandou uma fofoca, espalha pra todo mundo! (broadcast)
+                        #Se o controlador mandou uma "fofoca", espalha pra todo mundo! (broadcast)
                         if broadcast_str:
                             self.enviar_broadcast(broadcast_str)
                             
@@ -94,7 +90,7 @@ class ServidorTCP:
         except Exception as e:
             print(f"[REDE] Erro: {e}")
         finally:
-            #Tira o socket da lista VIP antes de fechar
+            #Tira o socket da lista de ativos antes de fechar
             if id_jogador in self.conexoes_ativas:
                 del self.conexoes_ativas[id_jogador]
                 
