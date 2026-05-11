@@ -38,13 +38,13 @@ class Mapa:
     def exibe_colorido(self):
         """Exibe a matriz colorida no terminal usando ANSI."""
         CORES = {
-            0: '\033[42m',     # Terra: Verde Escuro
-            1: '\033[44m',     # Água: Azul
-            2: '\033[43m',     # Areia: Amarelo
-            3: '\033[43;1m',   # Trigo: Amarelo Claro
-            4: '\033[46m',     # Arroz: Ciano
-            6: '\033[42;1m',   # Cana na Terra: Verde Claro
-            7: '\033[47m'      # Cana na Areia: Branco
+            0: '\033[42m',      # Terra: Verde Escuro
+            1: '\033[44m',      # Água: Azul
+            2: '\033[43m',      # Areia: Amarelo
+            3: '\033[48;5;94m', # Trigo: Marrom Claro
+            4: '\033[46m',      # Arroz: Ciano (Água com planta)
+            6: '\033[48;5;154m',# Cana na Terra: Verde Claro
+            7: '\033[48;5;154m' # Cana na Areia: Verde Claro (mesma cor para diferenciar do trigo)
         }
         RESET = '\033[0m'
         
