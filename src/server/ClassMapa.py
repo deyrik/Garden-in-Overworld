@@ -257,53 +257,9 @@ class Mapa:
         return False  
     #----------------------------------------------------------------------------------------------
 
-    # para enviar matriz
-    def tamanho_bytes(self):
-        """Calcula o tamanho total da matriz em bytes para determinar quantos pacotes serão necessários."""
-        # Cada inteiro na matriz pode ser representado por 1 byte (0-255), mas para segurança, vamos considerar 4 bytes por inteiro.
-        return self.linha * self.coluna * 4
-
-    def processar_pacote_matriz(self, pacote_json):
-        """
-        Recebe um dicionário JSON contendo uma parte da matriz e a anexa ao buffer.
-        Retorna a matriz completa quando todas as partes chegam, ou None caso contrário.
-        """
-        parte_atual = pacote_json.get("parte_atual")
-        total_partes = pacote_json.get("total_partes")
-        matriz_parcial = pacote_json.get("matriz_parcial")
-
-        # Se for o pacote número 1, garantimos que o buffer está limpo
-        if parte_atual == 1:
-            self.matriz_temporaria = []
-            self.partes_recebidas = 0
-
-        # O método .extend() pega as linhas fatiadas e adiciona no final da nossa lista principal
-        self.matriz_temporaria.extend(matriz_parcial)
-        self.partes_recebidas += 1
-
-        # Verifica se já montamos o quebra-cabeça inteiro
-        if self.partes_recebidas == total_partes:
-            print(f"Matriz montada com sucesso! Tamanho: {len(self.matriz_temporaria)} linhas.")
-            
-            # Salva a matriz pronta em uma variável final
-            matriz_pronta = self.matriz_temporaria
-            
-            # Limpa o buffer para a próxima vez que o servidor enviar uma atualização
-            self.matriz_temporaria = []
-            self.partes_recebidas = 0
-            
-            return matriz_pronta
-        
-        # Se ainda faltam partes (ex: recebeu a 1 de 4), retorna None e espera a próxima
-        return None
-    
-
-
-
 #teste
 if __name__ == "__main__":
     mapa = Mapa()
-    #mapa.inicializa_matriz()
     mapa.exibe_matriz()
 
     mapa.gerar_oasis(num_oasis=3)
@@ -314,3 +270,5 @@ if __name__ == "__main__":
 
     mapa.gerar_pocas(num_pocas=10, tamanho_maximo=4)
     mapa.exibe_colorido()
+
+    print(mapa.matriz)
