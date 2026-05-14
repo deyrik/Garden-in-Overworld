@@ -32,6 +32,20 @@ cd src
 python3 client/mainCliente.py
 ```
 
+### 3) Cliente com interface (PyQt6)
+
+Instale o PyQt6 (Ubuntu 22.04):
+
+```bash
+python3 -m pip install PyQt6
+```
+
+Execute:
+
+```bash
+make run-gui
+```
+
 ## Protocolo de mensagens (resumo)
 
 Todas as mensagens são JSON e **terminam com `\\n`**.
@@ -56,10 +70,8 @@ Todas as mensagens são JSON e **terminam com `\\n`**.
 Para atender integralmente ao enunciado da **Parte 3**, ainda falta:
 
 1. Implementar GUI obrigatória em **PyQt6**
-   - Tela de login/nickname
-   - Visualização do mapa (grid) e atualização via broadcast
-   - Ações de plantar/colher (inputs + validação)
-   - Threads: UI thread + thread de rede (listener) sem travar a interface
+   - (Feito - MVP) `src/client/gui.py` com grid + ações básicas + thread de rede
+   - (Falta) refinar UX: seleção por clique, legenda de cores, validações melhores
 
 2. Adicionar **SQLite (arquivo)** já populado
    - Definir o que persistir (ex.: usuários, inventário, histórico de ações, mapa inicial)
@@ -80,4 +92,3 @@ Para atender integralmente ao enunciado da **Parte 3**, ainda falta:
    - Validar parâmetros (`x,y,semente,cultura`) e erros de parsing
    - Tratar desconexões/queda de rede
    - (Se múltiplos clientes) proteger acesso concorrente ao estado do jogo (lock) ou documentar limitações
-

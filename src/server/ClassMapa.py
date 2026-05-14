@@ -222,7 +222,10 @@ class Mapa:
     # RF04 ----------------------------------------------------------------------------------------
     def plantar(self, x, y, cultura: int):
         """Realiza a ação de plantar o item correspondente ao valor da ação na posição (x, y) da matriz."""
-        
+        if cultura not in [3, 4, 5]:
+            print("Ação inválida: Cultura inválida para plantio.")
+            return False
+
         if self.valida_acao(x, y, cultura):
             if cultura == 5 and self.matriz[x][y] == 0:       #cana de acucar plantada na terra
                 self.matriz[x][y] = 6
@@ -242,23 +245,44 @@ class Mapa:
             print("Ação inválida: Posição fora do mapa.")
             return False
 
-        if cultura not in [3, 4, 6, 7]:                 #verifica se a cultura é um item plantavel
+        # Para colheita, o cliente deve pedir 3 (trigo), 4 (arroz) ou 5 (cana).
+        # Aceitamos 6/7 por compatibilidade (cana plantada em terra/areia).
+        if cultura not in [3, 4, 5, 6, 7]:
             print("Ação inválida: O item a ser " \
             "colhido não é uma cultura válida.")
             return False
-        
-        elif self.matriz[x][y] == cultura:               #verifica se o item na matriz é o mesmo que o item que se deseja colher
-            #volta ao estado que era antes
-            if  cultura == 3 or cultura == 6:    #trigo ou cana de acucar plantada na terra
-                self.matriz[x][y] = 0            #colhe, deixando a posição com terra (1)
-            elif cultura == 4:                   #arroz plantado na agua
-                self.matriz[x][y] = 1            #colhe, deixando a posição com agua  (2)
-            elif cultura == 7:                   #cana de acucar plantada na areia
-                self.matriz[x][y] = 2            #colhe, deixando a posição com areia (3)
 
+        valor_atual = self.matriz[x][y]
+
+        # trigo
+        if cultura == 3:
+            if valor_atual != 3:
+                print("Ação inválida: Não há trigo nessa posição.")
+                return False
+            self.matriz[x][y] = 0
             return True
+
+        # arroz
+        if cultura == 4:
+            if valor_atual != 4:
+                print("Ação inválida: Não há arroz nessa posição.")
+                return False
+            self.matriz[x][y] = 1
+            return True
+
+        # cana (pedido como 5, ou legado 6/7)
+        if cultura in [5, 6, 7]:
+            if valor_atual == 6:
+                self.matriz[x][y] = 0
+                return True
+            if valor_atual == 7:
+                self.matriz[x][y] = 2
+                return True
+            print("Ação inválida: Não há cana nessa posição.")
+            return False
+
         print("Ação inválida: Não é possível colher nessa posição.")
-        return False  
+        return False
     #----------------------------------------------------------------------------------------------
 
 #teste

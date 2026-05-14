@@ -8,6 +8,8 @@ run-server:
 run-client:
 	cd src && $(PY) client/mainCliente.py
 
+run-gui:
+	$(PY) src/client/gui.py
+
 lint:
 	$(PY) -m py_compile $$(find src -type f -name "*.py")
-
