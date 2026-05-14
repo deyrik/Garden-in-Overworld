@@ -1,3 +1,12 @@
+import os
+import sys
+
+# Permite executar tanto via `cd src/server && python3 mainServer.py`
+# quanto via `python3 src/server/mainServer.py`
+SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
+if SERVER_DIR not in sys.path:
+    sys.path.insert(0, SERVER_DIR)
+
 import ClassMapa as map
 import ClassUser as usManager
 import ClassControlador as ctrl

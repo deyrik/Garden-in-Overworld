@@ -16,6 +16,18 @@ class ControladorFazenda:
     def gera_boas_vindas(self, id_jogador):
         return json.dumps({"comando": "RESPOSTA", "status": "OK", "mensagem": f"BEM_VINDO: Jogador {id_jogador}"}) + "\n"
 
+    def _coerce_int(self, value):
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            return value
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
     def processa_mensagem(self, id_jogador, mensagem_str):
         print(f"[JOGO] Comando do Jogador {id_jogador}: {mensagem_str}")
         try:
@@ -29,12 +41,20 @@ class ControladorFazenda:
 
         if comando_recebido == "NICKNAME":
             nome = dados.get("nome", "SemNome")
-            self.gerenciador.slots[id_jogador].nick = nome
-            resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": f"Nickname atualizado para {nome}"}
+            jogador = self.gerenciador.slots.get(id_jogador)
+            if jogador is None:
+                resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": "Jogador inválido"}
+            else:
+                jogador.nick = str(nome)
+                resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": f"Nickname atualizado para {jogador.nick}"}
 
         elif comando_recebido == "PLANTAR":
-            semente, x, y = dados.get("semente"), dados.get("x"), dados.get("y")
-            if self.mapa.plantar(x, y, semente):
+            semente = self._coerce_int(dados.get("semente"))
+            x = self._coerce_int(dados.get("x"))
+            y = self._coerce_int(dados.get("y"))
+            if semente is None or x is None or y is None:
+                resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": "Parâmetros inválidos"}
+            elif self.mapa.plantar(x, y, semente):
                 resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Semente plantada"}
                 novo_valor = self.mapa.matriz[x][y]
                 dados_broadcast = {"comando": "ATUALIZAR_CELULA", "x": x, "y": y, "valor": novo_valor}
@@ -43,8 +63,12 @@ class ControladorFazenda:
                 resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": "Nao foi possivel plantar ai"}
 
         elif comando_recebido == "COLHER":
-            cultura, x, y = dados.get("cultura"), dados.get("x"), dados.get("y")
-            if self.mapa.colher(x, y, cultura):
+            cultura = self._coerce_int(dados.get("cultura"))
+            x = self._coerce_int(dados.get("x"))
+            y = self._coerce_int(dados.get("y"))
+            if cultura is None or x is None or y is None:
+                resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": "Parâmetros inválidos"}
+            elif self.mapa.colher(x, y, cultura):
                 resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Cultura colhida"}
                 novo_valor = self.mapa.matriz[x][y]
                 dados_broadcast = {"comando": "ATUALIZAR_CELULA", "x": x, "y": y, "valor": novo_valor}
@@ -56,7 +80,8 @@ class ControladorFazenda:
             resposta = {"comando": "ATUALIZAR_MAPA", "matriz": self.mapa.matriz}
 
         elif comando_recebido == "SAIR":
-            resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Desconectando..."}
+            # Comando especial para o servidor encerrar esta conexão
+            resposta = {"comando": "SAIR", "status": "OK", "mensagem": "Desconectando..."}
 
         else:
             resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": "Comando desconhecido"}

@@ -56,6 +56,13 @@ class ClienteFazenda:
                     "status": dados.get("status"), 
                     "mensagem": dados.get("mensagem")
                 }
+
+            elif comando_servidor == "SAIR":
+                return {
+                    "tipo": "RESPOSTA_SISTEMA",
+                    "status": dados.get("status"),
+                    "mensagem": dados.get("mensagem"),
+                }
             
             else:
                 print(f"[!] Aviso: Comando do servidor não reconhecido: {dados}")
@@ -64,3 +71,22 @@ class ClienteFazenda:
         except json.JSONDecodeError:
             print("Erro ao decodificar JSON.")
             return {"tipo": "IGNORAR"}
+
+    # Helpers usados pelo `mainCliente.py` (modo "script de demonstração")
+    def receber_matriz(self):
+        """Bloqueia até receber um evento de mapa completo e retorna a matriz."""
+        while True:
+            evento = self.escutar_servidor()
+            if evento.get("tipo") == "MAPA_COMPLETO":
+                return evento.get("matriz")
+            if evento.get("tipo") == "DESCONECTADO":
+                return None
+
+    def ler_resposta(self):
+        """Lê mensagens até receber uma RESPOSTA do servidor e retorna o evento."""
+        while True:
+            evento = self.escutar_servidor()
+            if evento.get("tipo") == "RESPOSTA_SISTEMA":
+                return evento
+            if evento.get("tipo") == "DESCONECTADO":
+                return evento

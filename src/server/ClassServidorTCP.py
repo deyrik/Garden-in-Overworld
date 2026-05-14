@@ -1,5 +1,6 @@
 import socket
 import threading
+import json
 
 class ServidorTCP:
     """Lida estritamente com Sockets e Threads. Totalmente agnóstico ao jogo."""
@@ -83,9 +84,15 @@ class ServidorTCP:
                         #Se o controlador mandou uma "fofoca", espalha pra todo mundo! (broadcast)
                         if broadcast_str:
                             self.enviar_broadcast(broadcast_str)
-                            
-                        if '"comando": "SAIR"' in resposta_str:
-                            return
+
+                        # Encerra conexão de forma robusta, interpretando o JSON retornado
+                        if resposta_str:
+                            try:
+                                dados_resposta = json.loads(resposta_str.strip())
+                                if str(dados_resposta.get("comando", "")).upper() == "SAIR":
+                                    return
+                            except json.JSONDecodeError:
+                                pass
 
         except Exception as e:
             print(f"[REDE] Erro: {e}")

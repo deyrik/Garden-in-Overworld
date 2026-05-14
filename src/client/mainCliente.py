@@ -1,3 +1,12 @@
+import os
+import sys
+
+# Permite executar tanto via `cd src && python3 client/mainCliente.py`
+# quanto via `python3 src/client/mainCliente.py`
+SRC_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
+
 import client.ClassFazendeiro as Fazendeiro
 import client.ClassTCPCliente as TCPc
 import client.ClassMapa as Mapa

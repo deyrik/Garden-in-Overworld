@@ -237,7 +237,11 @@ class Mapa:
     # RF06 ----------------------------------------------------------------------------------------
     def colher (self, x, y, cultura: int):
         """Realiza a ação de colher o item correspondente ao valor da ação na posição (x, y) da matriz."""
-        
+
+        if not self.valida_posicao(x, y):
+            print("Ação inválida: Posição fora do mapa.")
+            return False
+
         if cultura not in [3, 4, 6, 7]:                 #verifica se a cultura é um item plantavel
             print("Ação inválida: O item a ser " \
             "colhido não é uma cultura válida.")
