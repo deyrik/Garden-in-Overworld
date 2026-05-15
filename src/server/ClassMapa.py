@@ -204,57 +204,58 @@ class Mapa:
         return False
     
     def valida_acao(self, x, y, acao: int):
+
+         #volta uma tupla (string e booleano) para indicar o motivo da 
+         #falha e o resultado da validação  
         if not self.valida_posicao(x, y):
-            print("Ação inválida: Posição fora do mapa.")
-            return False
-            
+            return {"validar": False, "motivo": "Posicao fora do mapa"}
+      
         if not self.verifica_compatibilidade(x, y, acao):
-            print("Ação inválida: Solo incompatível.")
-            return False
-            
+            return {"validar": False, "motivo": "Solo incompativel"}
+
         if not self.verifica_fertilidade(x, y, acao):
-            print("Ação inválida: Longe da água.")
-            return False
-        
-        print("Ação válida: Pode plantar nessa posição.")
-        return True
+            return {"validar": False, "motivo": "Longe da agua"}
+
+        return {"validar": True, "motivo": "Acao valida"}
     
-    # RF04 ----------------------------------------------------------------------------------------
+    # RF04 ----------------------------------------------------------------------------------------   
     def plantar(self, x, y, cultura: int):
-        """Realiza a ação de plantar o item correspondente ao valor da ação na posição (x, y) da matriz."""
-        
-        if self.valida_acao(x, y, cultura):
-            if cultura == 5 and self.matriz[x][y] == 0:       #cana de acucar plantada na terra
+        """Realiza a ação de plantar o item na posição (x, y) e retorna o laudo."""
+        resultado = self.valida_acao(x, y, cultura)
+
+        if resultado["validar"]:
+            if cultura == 5 and self.matriz[x][y] == 0:       
                 self.matriz[x][y] = 6
-            elif cultura == 5 and self.matriz[x][y] == 2:     #cana de acucar plantada na areia
+            elif cultura == 5 and self.matriz[x][y] == 2:     
                 self.matriz[x][y] = 7
             else:   
-                self.matriz[x][y] = cultura                   #planta o item na matriz
-            return True
-        print("Ação inválida: Não é possível plantar nessa posição.")
-        return False
+                self.matriz[x][y] = cultura                   
+            
+            resultado["motivo"] = "Plantio realizado com sucesso!"
+            
+        return resultado # Retorna o dicionário, seja sucesso ou falha
     
     # RF06 ----------------------------------------------------------------------------------------
-    def colher (self, x, y, cultura: int):
-        """Realiza a ação de colher o item correspondente ao valor da ação na posição (x, y) da matriz."""
+    def colher(self, x, y, cultura: int):
+        """Realiza a ação de colher o item e retorna o laudo."""
         
-        if cultura not in [3, 4, 6, 7]:                 #verifica se a cultura é um item plantavel
-            print("Ação inválida: O item a ser " \
-            "colhido não é uma cultura válida.")
-            return False
+        if cultura not in [3, 4, 6, 7]:                 
+            return {"validar": False, "motivo": "Este item nao eh uma cultura colhivel."}
         
-        elif self.matriz[x][y] == cultura:               #verifica se o item na matriz é o mesmo que o item que se deseja colher
-            #volta ao estado que era antes
-            if  cultura == 3 or cultura == 6:    #trigo ou cana de acucar plantada na terra
-                self.matriz[x][y] = 0            #colhe, deixando a posição com terra (1)
-            elif cultura == 4:                   #arroz plantado na agua
-                self.matriz[x][y] = 1            #colhe, deixando a posição com agua  (2)
-            elif cultura == 7:                   #cana de acucar plantada na areia
-                self.matriz[x][y] = 2            #colhe, deixando a posição com areia (3)
+        elif self.matriz[x][y] == cultura:               
+            if cultura == 3 or cultura == 6:    
+                self.matriz[x][y] = 0            
+            elif cultura == 4:                   
+                self.matriz[x][y] = 1            
+            elif cultura == 7:                   
+                self.matriz[x][y] = 2            
 
-            return True
-        print("Ação inválida: Não é possível colher nessa posição.")
-        return False  
+            return {"validar": True, "motivo": "Colheita realizada com sucesso!"}
+            
+        else:
+            # A CORREÇÃO ENTRA AQUI: Se a pessoa tentou colher onde não tem nada!
+            return {"validar": False, "motivo": "Nao ha essa plantacao neste local para colher."}
+   
     #----------------------------------------------------------------------------------------------
 
 #teste

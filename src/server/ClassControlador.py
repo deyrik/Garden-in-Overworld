@@ -1,5 +1,13 @@
 import json
 
+
+#o erro esta na hora que mando a  mensagem de colher e plantar , prpvavelmente seja pq 
+# na o servidor mande suas mensagens , uma especifica pro cliente (sempre chega) e outra que 
+# sera o broadcast que aparantemente nao esta chegando ja que nao esta printando a matriz atualizada
+
+
+#comnetei a resposta exclusiva na função plantar, provavelmente a função 
+
 class ControladorFazenda:
     """Responsável por traduzir JSONs e aplicar as regras de negócio do jogo."""
     def __init__(self, mapa_instancia, gerenciador_instancia):
@@ -34,23 +42,37 @@ class ControladorFazenda:
 
         elif comando_recebido == "PLANTAR":
             semente, x, y = dados.get("semente"), dados.get("x"), dados.get("y")
-            if self.mapa.plantar(x, y, semente):
-                resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Semente plantada"}
+            
+            # 1. Executa a ação APENAS UMA VEZ e guarda o laudo do mapa
+            resultado = self.mapa.plantar(x, y, semente)
+            
+            # 2. Testa o booleano que está DENTRO do dicionário
+            if resultado["validar"] == True:
+                # Pega a string de sucesso
+                resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": resultado["motivo"]}
+                
                 novo_valor = self.mapa.matriz[x][y]
                 dados_broadcast = {"comando": "ATUALIZAR_CELULA", "x": x, "y": y, "valor": novo_valor}
                 broadcast = json.dumps(dados_broadcast) + "\n"
             else:
-                resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": "Nao foi possivel plantar ai"}
+                # Pega a string de erro
+                resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": resultado["motivo"]}
 
         elif comando_recebido == "COLHER":
             cultura, x, y = dados.get("cultura"), dados.get("x"), dados.get("y")
-            if self.mapa.colher(x, y, cultura):
-                resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Cultura colhida"}
+            
+            # 1. Executa a ação APENAS UMA VEZ e guarda o laudo do mapa
+            resultado = self.mapa.colher(x, y, cultura)
+            
+            # 2. Testa o booleano DENTRO do dicionário
+            if resultado["validar"] == True:
+                resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": resultado["motivo"]}
+                
                 novo_valor = self.mapa.matriz[x][y]
                 dados_broadcast = {"comando": "ATUALIZAR_CELULA", "x": x, "y": y, "valor": novo_valor}
                 broadcast = json.dumps(dados_broadcast) + "\n"
             else:
-                resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": "Nao foi possivel colher ai"}
+                resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": resultado["motivo"]}
 
         elif comando_recebido == "MATRIZ":
             resposta = {"comando": "ATUALIZAR_MAPA", "matriz": self.mapa.matriz}
@@ -62,3 +84,9 @@ class ControladorFazenda:
             resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": "Comando desconhecido"}
 
         return json.dumps(resposta) + "\n", broadcast
+    
+
+
+
+
+

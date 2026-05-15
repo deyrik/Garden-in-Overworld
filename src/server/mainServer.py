@@ -6,7 +6,7 @@ import ClassServidorTCP as tcpS
 if __name__ == "__main__":
     print("--- INICIALIZANDO MUNDO ---")
     mapa_jogo = map.Mapa()
-    mapa_jogo.gerar_mapa_aleatorio()
+    mapa_jogo.gerar_mapa_aleatorio(direcao="horizontal")
     mapa_jogo.exibe_colorido()
 
     gerenciador = usManager.GerenciadorUsers()
@@ -14,7 +14,7 @@ if __name__ == "__main__":
     print("--- CONECTANDO AS CAMADAS ---")
     controlador = ctrl.ControladorFazenda(mapa_jogo, gerenciador)
     
-    # Cria a Rede e injeta os gatilhos do Cérebro
+    # Cria a Rede e injeta os gatilhos(callbacks, funções de resposta) do controlador
     servidor = tcpS.ServidorTCP(
         host="localhost", 
         port=12345,
