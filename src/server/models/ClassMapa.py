@@ -227,4 +227,3 @@ class Mapa:
             # A CORREÇÃO ENTRA AQUI: Se a pessoa tentou colher onde não tem nada!
             return {"validar": False, "motivo": "Nao ha essa plantacao neste local para colher."}
    
-    #----------------------------------------------------------------------------------------------
