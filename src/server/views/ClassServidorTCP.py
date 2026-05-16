@@ -5,7 +5,6 @@ class ServidorTCP:
     """Lida estritamente com Sockets e Threads. Totalmente agnóstico ao jogo."""
     def __init__(self, host="localhost", port=12345, 
                  ao_conectar=None,  
-                 ao_gerar_boas_vindas=None,
                  ao_receber_mensagem=None, 
                  ao_desconectar=None):
         
@@ -14,7 +13,6 @@ class ServidorTCP:
         self.port = port
         # Callbacks (Gatilhos/Funcoes) passados pelo Controlador
         self.ao_conectar = ao_conectar 
-        self.ao_gerar_boas_vindas = ao_gerar_boas_vindas
         self.ao_receber_mensagem = ao_receber_mensagem
         self.ao_desconectar = ao_desconectar
 
@@ -57,8 +55,6 @@ class ServidorTCP:
         self.conexoes_ativas[id_jogador] = client_socket 
         
         try:
-            boas_vindas = self.ao_gerar_boas_vindas(id_jogador)
-            client_socket.sendall(boas_vindas.encode())
 
             while True:
                 pedaco = client_socket.recv(1024).decode()

@@ -135,35 +135,6 @@ class Mapa:
         self.gerar_rio(direcao, num_nascentes, prob_areia)
         self.gerar_pocas(num_pocas, tamanho_maximo_pocas)
 
-    def exibe_matriz(self):
-        """Exibe a matriz do mapa, mostrando o estado atual de cada posição."""
-        for i in range(self.linha):
-            for j in range(self.coluna):
-                print(self.matriz[i][j], end=' ')
-            print()
-
-    def exibe_colorido(self):
-        # Códigos ANSI expandidos para as plantações
-        CORES = {
-            0: '\033[42m',      # Terra: Verde Escuro
-            1: '\033[44m',      # Água: Azul
-            2: '\033[43m',      # Areia: Amarelo
-            3: '\033[48;5;94m', # Trigo: Marrom Claro
-            4: '\033[46m',      # Arroz: Ciano (Água com planta)
-            6: '\033[48;5;154m',# Cana na Terra: Verde Claro
-            7: '\033[48;5;154m' # Cana na Areia: Verde Claro (mesma cor para diferenciar do trigo)
-        }
-        RESET = '\033[0m'
-        
-        print("\n=== Mapa Gerado ===")
-        for linha in self.matriz:
-            linha_visual = ""
-            for val in linha:
-                cor = CORES.get(val, '\033[40m') # Preto como fallback para erros
-                linha_visual += f"{cor}   {RESET}"
-            print(linha_visual)
-        print("===================\n")
-
     # RF05 ----------------------------------------------------------------------------------------
     def valida_posicao(self, x, y):
         """Verifica se as coordenadas (x, y) estão dentro dos limites da matriz."""
@@ -257,19 +228,3 @@ class Mapa:
             return {"validar": False, "motivo": "Nao ha essa plantacao neste local para colher."}
    
     #----------------------------------------------------------------------------------------------
-
-#teste
-if __name__ == "__main__":
-    mapa = Mapa()
-    mapa.exibe_matriz()
-
-    mapa.gerar_oasis(num_oasis=3)
-    mapa.exibe_colorido()
-
-    mapa.gerar_rio(direcao='vertical', num_nascentes=3)
-    mapa.exibe_colorido()
-
-    mapa.gerar_pocas(num_pocas=10, tamanho_maximo=4)
-    mapa.exibe_colorido()
-
-    print(mapa.matriz)

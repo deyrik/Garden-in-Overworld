@@ -1,13 +1,5 @@
 import json
 
-
-#o erro esta na hora que mando a  mensagem de colher e plantar , prpvavelmente seja pq 
-# na o servidor mande suas mensagens , uma especifica pro cliente (sempre chega) e outra que 
-# sera o broadcast que aparantemente nao esta chegando ja que nao esta printando a matriz atualizada
-
-
-#comnetei a resposta exclusiva na função plantar, provavelmente a função 
-
 class ControladorFazenda:
     """Responsável por traduzir JSONs e aplicar as regras de negócio do jogo."""
     def __init__(self, mapa_instancia, gerenciador_instancia):
@@ -22,7 +14,7 @@ class ControladorFazenda:
         self.gerenciador.remove_da_vaga(id_jogador)
 
     def gera_boas_vindas(self, id_jogador):
-        return json.dumps({"comando": "RESPOSTA", "status": "OK", "mensagem": f"BEM_VINDO: Jogador {id_jogador}"}) + "\n"
+        return json.dumps({"comando": "RESPOSTA", "status": "OK", "mensagem": f"BEEM_VINDO: {self.gerenciador.slots[id_jogador].nick}"}) + "\n"
 
     def processa_mensagem(self, id_jogador, mensagem_str):
         print(f"[JOGO] Comando do Jogador {id_jogador}: {mensagem_str}")
@@ -38,7 +30,8 @@ class ControladorFazenda:
         if comando_recebido == "NICKNAME":
             nome = dados.get("nome", "SemNome")
             self.gerenciador.slots[id_jogador].nick = nome
-            resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": f"Nickname atualizado para {nome}"}
+            #self.gera_boas_vindas(id_jogador)
+            resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": f"BEM_VINDO: {self.gerenciador.slots[id_jogador].nick}"}
 
         elif comando_recebido == "PLANTAR":
             semente, x, y = dados.get("semente"), dados.get("x"), dados.get("y")
