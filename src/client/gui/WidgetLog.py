@@ -30,6 +30,13 @@ class WidgetLog(QGroupBox):
         )
 
     def registrar_celula(self, x, y, valor):
-        NOMES = {0:"terra",1:"água",2:"areia",3:"trigo",4:"arroz",6:"cana(terra)",7:"cana(areia)"}
+        NOMES = {
+            0:"terra", 1:"água", 2:"areia",
+            8:"solo preparado(terra)", 9:"solo preparado(areia)",
+            3:"trigo", 4:"arroz", 6:"cana(terra)", 7:"cana(areia)",
+            10:"milho", 11:"batata", 12:"tomate",
+            13:"trigo pronto", 14:"arroz pronto", 15:"cana pronta",
+            16:"cana pronta(areia)", 17:"milho pronto", 18:"batata pronta", 19:"tomate pronto",
+        }
         nome = NOMES.get(valor, str(valor))
         self.adicionar_evento(f"Célula ({x},{y}) → {nome}")
