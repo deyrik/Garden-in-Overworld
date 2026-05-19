@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QProgressBar
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QProgressBar
 from PyQt6.QtCore import Qt
 from . import estilos
 
@@ -8,26 +8,38 @@ EMOJIS_CULTURA = {3: "🌾", 4: "🌿", 6: "🎋", 10: "🌽", 11: "🥔", 12: "
 class WidgetHUD(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedHeight(44)
-        self.setStyleSheet(f"background-color: #0d1117; border-bottom: 1px solid {estilos.DESTAQUE};")
+        self.setFixedHeight(56)
+        self.setStyleSheet(f"background-color: #0d1117; border-bottom: 2px solid {estilos.DESTAQUE};")
         self._layout = QHBoxLayout(self)
-        self._layout.setContentsMargins(12, 4, 12, 4)
-        self._layout.setSpacing(16)
+        self._layout.setContentsMargins(16, 6, 16, 6)
+        self._layout.setSpacing(20)
 
         self._label_temporada = QLabel("🌱 —")
-        self._label_temporada.setStyleSheet(f"color: {estilos.DESTAQUE}; font-weight: bold; font-size: 13px; border: none; background: transparent;")
+        self._label_temporada.setStyleSheet(
+            f"color: {estilos.DESTAQUE}; font-weight: bold; font-size: 14px; border: none; background: transparent;"
+        )
         self._layout.addWidget(self._label_temporada)
 
-        self._barras = {}  # cultura -> (label, QProgressBar)
+        sep = QLabel("|")
+        sep.setStyleSheet("color: #444; border: none; background: transparent;")
+        self._layout.addWidget(sep)
+
+        lbl_meta = QLabel("META:")
+        lbl_meta.setStyleSheet("color: #888; font-size: 11px; letter-spacing: 1px; border: none; background: transparent;")
+        self._layout.addWidget(lbl_meta)
+
+        self._barras = {}
         self._container_barras = QWidget()
         self._container_barras.setStyleSheet("background: transparent; border: none;")
         self._layout_barras = QHBoxLayout(self._container_barras)
         self._layout_barras.setContentsMargins(0, 0, 0, 0)
-        self._layout_barras.setSpacing(8)
+        self._layout_barras.setSpacing(12)
         self._layout.addWidget(self._container_barras, stretch=1)
 
         self._label_timer = QLabel("--:--")
-        self._label_timer.setStyleSheet(f"color: {estilos.AMBAR}; font-weight: bold; font-size: 16px; border: none; background: transparent;")
+        self._label_timer.setStyleSheet(
+            f"color: {estilos.AMBAR}; font-weight: bold; font-size: 18px; border: none; background: transparent;"
+        )
         self._label_timer.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self._layout.addWidget(self._label_timer)
 
@@ -47,20 +59,30 @@ class WidgetHUD(QWidget):
         for cultura_str, meta in demanda.items():
             cultura = int(cultura_str)
             emoji = EMOJIS_CULTURA.get(cultura, "?")
-            lbl = QLabel(f"{emoji} 0/{meta}")
-            lbl.setStyleSheet("color: #ccc; font-size: 11px; border: none; background: transparent;")
+            nome = NOMES_CULTURA.get(cultura, str(cultura))
+
+            bloco = QWidget()
+            bloco.setStyleSheet("background: transparent; border: none;")
+            bl = QVBoxLayout(bloco)
+            bl.setContentsMargins(0, 0, 0, 0)
+            bl.setSpacing(2)
+
+            lbl = QLabel(f"{emoji} {nome}  0/{meta}")
+            lbl.setStyleSheet("color: #e0e0e0; font-size: 12px; font-weight: bold; border: none; background: transparent;")
+
             barra = QProgressBar()
             barra.setRange(0, meta)
             barra.setValue(0)
-            barra.setFixedWidth(60)
-            barra.setFixedHeight(8)
+            barra.setFixedHeight(6)
             barra.setTextVisible(False)
             barra.setStyleSheet(
                 "QProgressBar { background: #333; border-radius: 3px; border: none; }"
                 f"QProgressBar::chunk {{ background: {estilos.DESTAQUE}; border-radius: 3px; }}"
             )
-            self._layout_barras.addWidget(lbl)
-            self._layout_barras.addWidget(barra)
+
+            bl.addWidget(lbl)
+            bl.addWidget(barra)
+            self._layout_barras.addWidget(bloco)
             self._barras[cultura] = (lbl, barra, meta)
 
     def atualizar_progresso(self, progresso: dict, demanda: dict):
@@ -70,7 +92,12 @@ class WidgetHUD(QWidget):
                 continue
             lbl, barra, meta = self._barras[cultura]
             emoji = EMOJIS_CULTURA.get(cultura, "?")
-            lbl.setText(f"{emoji} {atual}/{meta}")
+            nome = NOMES_CULTURA.get(cultura, str(cultura))
+            concluido = atual >= meta
+            cor = estilos.DESTAQUE if concluido else "#e0e0e0"
+            sufixo = " ✓" if concluido else ""
+            lbl.setText(f"{emoji} {nome}  {atual}/{meta}{sufixo}")
+            lbl.setStyleSheet(f"color: {cor}; font-size: 12px; font-weight: bold; border: none; background: transparent;")
             barra.setValue(min(atual, meta))
 
     def atualizar_timer(self, segundos: int):

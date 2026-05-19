@@ -6,6 +6,7 @@ from .WidgetEstoque import WidgetEstoque
 from .WidgetHUD import WidgetHUD
 from .WidgetLog import WidgetLog
 from .WidgetChat import WidgetChat
+from .DialogTutorial import DialogTutorial
 from . import estilos
 
 class JanelaPrincipal(QMainWindow):
@@ -165,9 +166,14 @@ class JanelaPrincipal(QMainWindow):
         self._widget_hud.atualizar_temporada(dados)
         culturas = [int(c) for c in dados.get("demanda", {}).keys()]
         self._widget_acoes.atualizar_culturas_disponiveis(culturas)
+        numero = dados.get("temporada", 1)
         nome = dados.get("nome", "")
-        self._widget_log.adicionar_evento(f"🌱 Temporada {dados.get('temporada')} — {nome} iniciada!")
-        self._mostrar_toast(f"🌱 Temporada {dados.get('temporada')} — {nome}!", "info")
+        self._widget_log.adicionar_evento(f"🌱 Temporada {numero} — {nome} iniciada!")
+        self._mostrar_toast(f"🌱 Temporada {numero} — {nome}!", "info")
+        # Tutorial: completo na T1, resumo de novidades nas T2, T3 e T4
+        if numero <= 4:
+            dlg = DialogTutorial(numero, self)
+            dlg.exec()
 
     def _on_cultura_pronta(self, x, y, cultura):
         self._widget_log.adicionar_evento(f"✨ Cultura pronta em ({x},{y})!")
