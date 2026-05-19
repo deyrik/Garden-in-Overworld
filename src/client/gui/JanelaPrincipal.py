@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QLabel)
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from .WidgetMapa import WidgetMapa
 from .WidgetAcoes import WidgetAcoes
 from .WidgetEstoque import WidgetEstoque
@@ -28,6 +28,14 @@ class JanelaPrincipal(QMainWindow):
         self._label_jogadores.setStyleSheet(f"color: {estilos.DESTAQUE}; font-size: 11px;")
         self._label_jogadores.setWordWrap(True)
         self._jogadores = {}  # slot -> nick
+
+        self._toast = QLabel("", self)
+        self._toast.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._toast.setFixedHeight(32)
+        self._toast.hide()
+        self._timer_toast = QTimer(self)
+        self._timer_toast.setSingleShot(True)
+        self._timer_toast.timeout.connect(self._toast.hide)
 
         self._montar_layout()
         self._conectar_sinais(ouvinte)
@@ -119,15 +127,39 @@ class JanelaPrincipal(QMainWindow):
         self._fazendeiro.solicita_cursor(x, y)
         self._widget_acoes.executar_para_celula(x, y, valor)
 
+    def _mostrar_toast(self, mensagem, tipo="info"):
+        cores = {"ok": ("#00ff88", "#0d1117"), "erro": ("#ff4444", "#ffffff"), "aviso": ("#ffb347", "#0d1117"), "info": ("#6b9fff", "#0d1117")}
+        bg, fg = cores.get(tipo, cores["info"])
+        self._toast.setText(mensagem)
+        self._toast.setStyleSheet(
+            f"background-color: {bg}; color: {fg}; font-weight: bold; font-size: 13px;"
+            f"border-radius: 6px; padding: 4px 16px;"
+        )
+        self._posicionar_toast()
+        self._toast.show()
+        self._toast.raise_()
+        self._timer_toast.start(3000)
+
+    def _posicionar_toast(self):
+        w = min(500, self.width() - 40)
+        x = (self.width() - w) // 2
+        y = self._widget_hud.height() + 10
+        self._toast.setGeometry(x, y, w, 32)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self._toast.isVisible():
+            self._posicionar_toast()
+
     def _on_resposta(self, status, mensagem, extra):
+        if isinstance(extra, dict) and extra.get("cultura") is not None:
+            self._widget_acoes.atualizar_semente_na_mao(
+                extra.get("cultura"), extra.get("quantidade", 0)
+            )
         if status == "OK":
-            if isinstance(extra, dict):
-                cultura = extra.get("cultura")
-                quantidade = extra.get("quantidade", 0)
-            else:
-                cultura = extra
-                quantidade = 1 if cultura is not None else 0
-            self._widget_acoes.atualizar_semente_na_mao(cultura, quantidade)
+            self._mostrar_toast(f"✅ {mensagem}", "ok")
+        elif status == "ERRO":
+            self._mostrar_toast(f"❌ {mensagem}", "erro")
 
     def _on_inicio_temporada(self, dados: dict):
         self._widget_hud.atualizar_temporada(dados)
@@ -135,9 +167,11 @@ class JanelaPrincipal(QMainWindow):
         self._widget_acoes.atualizar_culturas_disponiveis(culturas)
         nome = dados.get("nome", "")
         self._widget_log.adicionar_evento(f"🌱 Temporada {dados.get('temporada')} — {nome} iniciada!")
+        self._mostrar_toast(f"🌱 Temporada {dados.get('temporada')} — {nome}!", "info")
 
     def _on_cultura_pronta(self, x, y, cultura):
         self._widget_log.adicionar_evento(f"✨ Cultura pronta em ({x},{y})!")
+        self._mostrar_toast(f"✨ Cultura pronta em ({x},{y})! Hora de colher!", "aviso")
 
     def _on_posicao_jogador(self, slot, nick, x, y):
         self._jogadores[slot] = nick

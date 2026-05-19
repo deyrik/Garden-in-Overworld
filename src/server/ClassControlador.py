@@ -235,13 +235,11 @@ class ControladorFazenda:
                             "cultura": semente if qtd_restante > 0 else None,
                             "quantidade": qtd_restante}
             else:
-                self.estoque.repor(semente)
-                jogador.quantidade_na_mao -= 1
-                if jogador.quantidade_na_mao <= 0:
-                    jogador.semente_na_mao = None
-                    jogador.quantidade_na_mao = 0
+                # Semente permanece na mão — tile incompatível ou não preparado
                 resposta = {"comando": "RESPOSTA", "status": "ERRO",
-                            "mensagem": "Nao foi possivel plantar ai"}
+                            "mensagem": "Nao foi possivel plantar ai",
+                            "cultura": jogador.semente_na_mao,
+                            "quantidade": jogador.quantidade_na_mao}
 
         elif comando == "COLHER":
             x, y = dados.get("x"), dados.get("y")
