@@ -1,75 +1,94 @@
-from PyQt6.QtWidgets import QGroupBox, QVBoxLayout, QPushButton, QLabel
+from PyQt6.QtWidgets import QGroupBox, QVBoxLayout, QPushButton, QLabel, QComboBox
 from PyQt6.QtCore import pyqtSignal
 from . import estilos
 
-TILES_COM_PLANTA = {3, 4, 6, 7}
+ACOES = ["PREPARAR", "PEGAR", "PLANTAR", "COLHER"]
 
-NOME_CULTURA = {
-    3: "🌾 Plantar Trigo",
-    4: "🌿 Plantar Arroz",
-    5: "🎋 Plantar Cana",
+CULTURAS_DISPONIVEIS = {
+    3: "🌾 Trigo",
+    4: "🌿 Arroz",
+    6: "🎋 Cana",
+    10: "🌽 Milho",
+    11: "🥔 Batata",
+    12: "🍅 Tomate",
 }
 
-CULTURA_COLHER = {
-    3: 3,
-    4: 4,
-    6: 6,
-    7: 7,
-}
+CULTURAS_PRONTAS = {13, 14, 15, 16, 17, 18, 19}
 
 ESTILO_SELECIONADO = f"""
     QPushButton {{
         background-color: {estilos.DESTAQUE};
         color: {estilos.FUNDO};
-        border: 1px solid {estilos.DESTAQUE};
+        border: none;
         border-radius: 3px;
-        padding: 4px 8px;
+        padding: 5px;
+        font-size: 11px;
         font-weight: bold;
     }}
 """
 
 class WidgetAcoes(QGroupBox):
-    sinal_plantar = pyqtSignal(int, int, int)   # semente, x, y
-    sinal_colher = pyqtSignal(int, int, int)    # cultura, x, y
+    sinal_preparar   = pyqtSignal(int, int)        # x, y
+    sinal_pegar_semente = pyqtSignal(int)          # cultura
+    sinal_plantar    = pyqtSignal(int, int, int)   # semente, x, y
+    sinal_colher     = pyqtSignal(int, int)        # x, y
 
     def __init__(self, parent=None):
-        super().__init__("AÇÕES", parent)
-        self._acao_selecionada = None  # None, 3, 4, 5 ou "COLHER"
+        super().__init__("AÇÃO", parent)
+        self._acao_selecionada = None
         self._botoes = {}
-        self._label_info = None
+        self._semente_na_mao = None
+        self._culturas_disponiveis = list(CULTURAS_DISPONIVEIS.keys())[:3]  # Temporada 1
         self._montar_layout()
 
     def _montar_layout(self):
         layout = QVBoxLayout(self)
-        self._label_info = QLabel("Selecione uma ação\ne clique no mapa")
-        self._label_info.setWordWrap(True)
-        layout.addWidget(self._label_info)
+        layout.setSpacing(4)
 
-        for cultura, nome in NOME_CULTURA.items():
-            btn = QPushButton(nome)
-            btn.clicked.connect(lambda _, c=cultura: self._selecionar_acao(c))
-            self._botoes[cultura] = btn
+        for acao in ACOES:
+            rotulos = {
+                "PREPARAR": "🪵 Preparar solo",
+                "PEGAR":    "🌱 Pegar semente",
+                "PLANTAR":  "🌿 Plantar",
+                "COLHER":   "✂️ Colher",
+            }
+            btn = QPushButton(rotulos[acao])
+            btn.clicked.connect(lambda _, a=acao: self._selecionar_acao(a))
+            self._botoes[acao] = btn
             layout.addWidget(btn)
 
-        btn_colher = QPushButton("✂️ Colher")
-        btn_colher.clicked.connect(lambda: self._selecionar_acao("COLHER"))
-        self._botoes["COLHER"] = btn_colher
-        layout.addWidget(btn_colher)
+        self._combo_semente = QComboBox()
+        self._combo_semente.setVisible(False)
+        self._combo_semente.setStyleSheet(f"background: {estilos.PAINEL}; color: {estilos.TEXTO}; border: 1px solid {estilos.BORDA};")
+        layout.addWidget(self._combo_semente)
+
+        self._label_na_mao = QLabel("Na mão: —")
+        self._label_na_mao.setStyleSheet(f"color: {estilos.AMBAR}; font-size: 11px;")
+        layout.addWidget(self._label_na_mao)
+
         layout.addStretch()
+        self._atualizar_visuais()
 
     def _selecionar_acao(self, acao):
         if self._acao_selecionada == acao:
             self._acao_selecionada = None
-            self._label_info.setText("Selecione uma ação\ne clique no mapa")
         else:
             self._acao_selecionada = acao
-            nome = NOME_CULTURA.get(acao, "✂️ Colher") if acao != "COLHER" else "✂️ Colher"
-            self._label_info.setText(f"Ação: {nome}\nClique no mapa para usar")
+
+        self._combo_semente.setVisible(self._acao_selecionada == "PEGAR")
+        if self._acao_selecionada == "PEGAR":
+            self._recarregar_combo()
+
         self._atualizar_visuais()
 
+    def _recarregar_combo(self):
+        self._combo_semente.clear()
+        for c in self._culturas_disponiveis:
+            self._combo_semente.addItem(CULTURAS_DISPONIVEIS[c], c)
+
     def _atualizar_visuais(self):
-        for chave, btn in self._botoes.items():
-            if chave == self._acao_selecionada:
+        for acao, btn in self._botoes.items():
+            if acao == self._acao_selecionada:
                 btn.setStyleSheet(ESTILO_SELECIONADO)
             else:
                 btn.setStyleSheet("")
@@ -77,8 +96,32 @@ class WidgetAcoes(QGroupBox):
     def executar_para_celula(self, x, y, valor_tile):
         if self._acao_selecionada is None:
             return
-        if self._acao_selecionada == "COLHER":
-            if valor_tile in TILES_COM_PLANTA:
-                self.sinal_colher.emit(CULTURA_COLHER[valor_tile], x, y)
+
+        if self._acao_selecionada == "PREPARAR":
+            self.sinal_preparar.emit(x, y)
+
+        elif self._acao_selecionada == "PEGAR":
+            cultura = self._combo_semente.currentData()
+            if cultura is not None:
+                self.sinal_pegar_semente.emit(cultura)
+
+        elif self._acao_selecionada == "PLANTAR":
+            if self._semente_na_mao is not None:
+                self.sinal_plantar.emit(self._semente_na_mao, x, y)
+
+        elif self._acao_selecionada == "COLHER":
+            if valor_tile in CULTURAS_PRONTAS:
+                self.sinal_colher.emit(x, y)
+
+    def atualizar_semente_na_mao(self, cultura):
+        self._semente_na_mao = cultura
+        if cultura is None:
+            self._label_na_mao.setText("Na mão: —")
         else:
-            self.sinal_plantar.emit(self._acao_selecionada, x, y)
+            nome = CULTURAS_DISPONIVEIS.get(cultura, str(cultura))
+            self._label_na_mao.setText(f"Na mão: {nome} ×1")
+
+    def atualizar_culturas_disponiveis(self, culturas: list):
+        self._culturas_disponiveis = culturas
+        if self._acao_selecionada == "PEGAR":
+            self._recarregar_combo()
