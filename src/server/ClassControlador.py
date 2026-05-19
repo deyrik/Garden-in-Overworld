@@ -6,6 +6,8 @@ from ClassMapa import (TEMPO_CRESCIMENTO, MAPA_CRESCENDO_PARA_PRONTA,
                        MAPA_PRONTA_PARA_BASE, CULTURAS_PRONTAS, CULTURAS_CRESCENDO)
 from ClassTemporada import Temporada, PRONTA_PARA_DEMANDA
 
+NOMES_TEMPORADA = {1: "Primavera", 2: "Verão", 3: "Outono", 4: "Inverno"}
+
 
 class ControladorFazenda:
     """Responsável por traduzir JSONs e aplicar as regras de negócio do jogo."""
@@ -31,8 +33,11 @@ class ControladorFazenda:
         self.gerenciador.remove_da_vaga(id_jogador)
 
     def gera_boas_vindas(self, id_jogador):
-        return json.dumps({"comando": "RESPOSTA", "status": "OK",
-                           "mensagem": f"BEM_VINDO: Jogador {id_jogador}"}) + "\n"
+        msgs = [json.dumps({"comando": "RESPOSTA", "status": "OK",
+                            "mensagem": f"BEM_VINDO: Jogador {id_jogador}"}) + "\n"]
+        if self.temporada:
+            msgs.append(self._msg_inicio_temporada())
+        return "".join(msgs)
 
     # -------------------------------------------------------------------------
     # Lógica de temporada
@@ -52,17 +57,21 @@ class ControladorFazenda:
             ao_gelo=self._ao_gelo if numero >= 4 else None,
         )
         self.temporada.iniciar()
+        if self._broadcast:
+            self._broadcast(self._msg_inicio_temporada())
+        print(f"[JOGO] Temporada {numero} iniciada.")
+
+    def _msg_inicio_temporada(self) -> str:
         estado = self.temporada.get_estado()
-        msg = json.dumps({
+        numero = estado["numero"]
+        return json.dumps({
             "comando": "INICIO_TEMPORADA",
-            "numero": estado["numero"],
-            "demanda": estado["demanda"],
+            "temporada": numero,
+            "nome": NOMES_TEMPORADA.get(min(numero, 4), f"Temporada {numero}"),
+            "demanda": {str(k): v for k, v in estado["demanda"].items()},
             "restante": estado["restante"],
             "estoque": self.estoque.snapshot(),
         }) + "\n"
-        if self._broadcast:
-            self._broadcast(msg)
-        print(f"[JOGO] Temporada {numero} iniciada.")
 
     def _ao_tick_temporada(self, restante: int):
         if self._broadcast:
