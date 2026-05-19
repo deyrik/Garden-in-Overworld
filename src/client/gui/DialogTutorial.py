@@ -59,7 +59,7 @@ class DialogTutorial(QDialog):
         super().__init__(parent)
         self.setWindowTitle("📖 Tutorial")
         self.setModal(True)
-        self.setFixedSize(480, 320)
+        self.setFixedSize(480, 420)
         self.setStyleSheet(
             f"background-color: {estilos.FUNDO}; color: {estilos.TEXTO};"
             f"font-family: 'Courier New', monospace;"
