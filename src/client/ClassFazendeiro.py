@@ -34,9 +34,10 @@ class ClienteFazenda:
         dados = {"comando": "PREPARAR", "x": x, "y": y}
         self.rede.manda_mensagem(json.dumps(dados))
 
-    def solicita_pegar_semente(self, cultura: int):
-        dados = {"comando": "PEGAR_SEMENTE", "cultura": cultura}
-        self.rede.manda_mensagem(json.dumps(dados))
+    def solicita_pegar_semente(self, cultura: int, quantidade: int = 1):
+        dados = json.dumps({"comando": "PEGAR_SEMENTE", "cultura": cultura})
+        for _ in range(max(1, quantidade)):
+            self.rede.manda_mensagem(dados)
 
     def solicita_cursor(self, x, y):
         dados = {"comando": "CURSOR", "x": x, "y": y}
