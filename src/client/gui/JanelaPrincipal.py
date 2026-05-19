@@ -102,7 +102,9 @@ class JanelaPrincipal(QMainWindow):
 
         # Ações → Rede
         self._widget_acoes.sinal_preparar.connect(self._fazendeiro.solicita_preparar)
-        self._widget_acoes.sinal_pegar_semente.connect(self._fazendeiro.solicita_pegar_semente)
+        self._widget_acoes.sinal_pegar_semente.connect(
+            lambda cultura, qtd: self._fazendeiro.solicita_pegar_semente(cultura, qtd)
+        )
         self._widget_acoes.sinal_plantar.connect(
             lambda semente, x, y: self._fazendeiro.solicita_plantar(semente, x, y)
         )
