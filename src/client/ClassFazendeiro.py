@@ -52,11 +52,18 @@ class ClienteFazenda:
             elif comando_servidor == "RESPOSTA":
                 # Respostas de sistema (BEM_VINDO, OK (de plantio), ERRO, SAIR)
                 return {
-                    "tipo": "RESPOSTA_SISTEMA", 
-                    "status": dados.get("status"), 
+                    "tipo": "RESPOSTA_SISTEMA",
+                    "status": dados.get("status"),
                     "mensagem": dados.get("mensagem")
                 }
-            
+
+            elif comando_servidor == "CHAT":
+                return {
+                    "tipo": "CHAT",
+                    "autor": dados.get("autor"),
+                    "mensagem": dados.get("mensagem")
+                }
+
             else:
                 print(f"[!] Aviso: Comando do servidor não reconhecido: {dados}")
                 return {"tipo": "IGNORAR"}

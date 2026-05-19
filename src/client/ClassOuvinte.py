@@ -1,49 +1,43 @@
-import threading
+from PyQt6.QtCore import QThread, pyqtSignal
 
-class OuvinteThread(threading.Thread):
-    """
-    Classe que funciona como uma Thread Fantasma.
-    Ela vive em paralelo para escutar o servidor e atualizar a matriz local.
-    """
-    def __init__(self, fazendeiro, mapa_jogo, evento_mapa_pronto):
-        # Inicia a Thread configurando-a como "daemon" (morre quando o jogo fecha)
-        super().__init__(daemon=True) 
-        
-        # Guarda as ferramentas que ela vai precisar usar
+class OuvinteThread(QThread):
+    """Thread de escuta do servidor. Emite sinais Qt para atualizar a UI."""
+    sinal_mapa_completo = pyqtSignal(list)
+    sinal_celula_atualizada = pyqtSignal(int, int, int)
+    sinal_resposta_sistema = pyqtSignal(str, str)
+    sinal_chat_recebido = pyqtSignal(str, str)
+    sinal_desconectado = pyqtSignal()
+
+    def __init__(self, fazendeiro, mapa_jogo):
+        super().__init__()
         self.fazendeiro = fazendeiro
         self.mapa_jogo = mapa_jogo
-        self.evento_mapa_pronto = evento_mapa_pronto
-    
-    #ja é padronizado usar "run" como nome do método principal da Thread, 
-    # então não precisa chamar ela de outra coisa
+
     def run(self):
-        """
-        loop infinito que vai começar a rodar em segundo plano.
-        """
         while True:
             evento = self.fazendeiro.escutar_servidor()
 
             if evento["tipo"] == "DESCONECTADO":
-                print("\n[Sistema] Conexão com o servidor encerrada.")
-                break 
+                self.sinal_desconectado.emit()
+                break
 
             elif evento["tipo"] == "MAPA_COMPLETO":
                 self.mapa_jogo.atualizar_matriz(evento["matriz"])
-                print("\n[Sistema] Mapa global sincronizado!")
-                
-                # Destrava a Main Thread
-                self.evento_mapa_pronto.set()
+                self.sinal_mapa_completo.emit(evento["matriz"])
 
             elif evento["tipo"] == "CELULA":
-                x = evento["x"]
-                y = evento["y"]
-                novo_valor = evento["valor"]
-                
-                self.mapa_jogo.matriz[x][y] = novo_valor
-                print(f"\n[Broadcast] Alguém atualizou a célula ({x}, {y}) para {novo_valor}.")
-                
-                self.mapa_jogo.exibe_colorido()
+                x, y, valor = evento["x"], evento["y"], evento["valor"]
+                self.mapa_jogo.matriz[x][y] = valor
+                self.sinal_celula_atualizada.emit(x, y, valor)
 
             elif evento["tipo"] == "RESPOSTA_SISTEMA":
-                if evento.get("status") == "ERRO":
-                    print(f"\n[Servidor Recusou] {evento.get('mensagem')}")
+                self.sinal_resposta_sistema.emit(
+                    evento.get("status", ""),
+                    evento.get("mensagem", "")
+                )
+
+            elif evento["tipo"] == "CHAT":
+                self.sinal_chat_recebido.emit(
+                    evento.get("autor", "?"),
+                    evento.get("mensagem", "")
+                )
