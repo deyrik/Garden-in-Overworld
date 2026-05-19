@@ -1,5 +1,4 @@
-from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout,
-                              QVBoxLayout, QLabel, QStatusBar)
+from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout)
 from PyQt6.QtCore import Qt
 from .WidgetMapa import WidgetMapa
 from .WidgetAcoes import WidgetAcoes
