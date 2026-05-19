@@ -145,13 +145,14 @@ class WidgetAcoes(QGroupBox):
             if valor_tile in CULTURAS_PRONTAS:
                 self.sinal_colher.emit(x, y)
 
-    def atualizar_semente_na_mao(self, cultura):
+    def atualizar_semente_na_mao(self, cultura, quantidade=0):
         self._semente_na_mao = cultura
-        if cultura is None:
+        if cultura is None or quantidade <= 0:
+            self._semente_na_mao = None
             self._label_na_mao.setText("Na mão: —")
         else:
             emoji, nome = CULTURAS_INFO.get(cultura, ("?", str(cultura)))
-            self._label_na_mao.setText(f"Na mão: {emoji} {nome} ×1")
+            self._label_na_mao.setText(f"Na mão: {emoji} {nome} ×{quantidade}")
 
     def atualizar_culturas_disponiveis(self, culturas: list):
         self._culturas_disponiveis = culturas

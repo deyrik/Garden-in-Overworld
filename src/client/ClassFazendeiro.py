@@ -72,7 +72,8 @@ class ClienteFazenda:
                     "tipo": "RESPOSTA_SISTEMA",
                     "status": dados.get("status"),
                     "mensagem": dados.get("mensagem"),
-                    "cultura": dados.get("cultura")
+                    "cultura": dados.get("cultura"),
+                    "quantidade": dados.get("quantidade", 0)
                 }
 
             elif comando_servidor == "CHAT":

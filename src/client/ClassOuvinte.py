@@ -43,7 +43,7 @@ class OuvinteThread(QThread):
                 self.sinal_resposta_sistema.emit(
                     evento.get("status", ""),
                     evento.get("mensagem", ""),
-                    evento.get("cultura")
+                    {"cultura": evento.get("cultura"), "quantidade": evento.get("quantidade", 0)}
                 )
 
             elif tipo == "CHAT":
