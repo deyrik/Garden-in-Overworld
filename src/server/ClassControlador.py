@@ -109,13 +109,14 @@ class ControladorFazenda:
 
     def _aplicar_gelo(self, x, y):
         """Destrói a cultura na posição (x, y) se ainda estiver lá."""
-        tile = self.mapa.matriz[x][y]
-        if tile not in CULTURAS_PRONTAS and tile not in CULTURAS_CRESCENDO:
-            return
         with self._lock_timers:
             timer = self._timers_crescimento.pop((x, y), None)
         if timer:
             timer.cancel()
+        # Re-lê o tile após cancelar o timer para evitar race condition
+        tile = self.mapa.matriz[x][y]
+        if tile not in CULTURAS_PRONTAS and tile not in CULTURAS_CRESCENDO:
+            return
         if tile in MAPA_PRONTA_PARA_BASE:
             self.mapa.matriz[x][y] = MAPA_PRONTA_PARA_BASE[tile]
         elif tile in MAPA_CRESCENDO_PARA_PRONTA:
@@ -220,6 +221,8 @@ class ControladorFazenda:
                 }) + "\n"
                 resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Plantado"}
             else:
+                # Devolve a semente ao estoque; semente nunca é 5 na prática
+                # pois PEGAR_SEMENTE com chave 5 sempre falha (5 não está no estoque)
                 self.estoque.repor(semente)
                 jogador.semente_na_mao = None
                 resposta = {"comando": "RESPOSTA", "status": "ERRO",
@@ -261,15 +264,19 @@ class ControladorFazenda:
 
         elif comando == "CURSOR":
             x, y = dados.get("x"), dados.get("y")
-            jogador = self.gerenciador.slots.get(id_jogador)
-            if jogador:
-                jogador.posicao = (x, y)
-            nick = jogador.nick if jogador else "?"
-            broadcast = json.dumps({
-                "comando": "POSICAO_JOGADOR", "id": id_jogador,
-                "nick": nick, "x": x, "y": y
-            }) + "\n"
-            resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Cursor atualizado"}
+            if x is None or y is None:
+                resposta = {"comando": "RESPOSTA", "status": "ERRO",
+                            "mensagem": "Coordenadas invalidas"}
+            else:
+                jogador = self.gerenciador.slots.get(id_jogador)
+                if jogador:
+                    jogador.posicao = (x, y)
+                nick = jogador.nick if jogador else "?"
+                broadcast = json.dumps({
+                    "comando": "POSICAO_JOGADOR", "id": id_jogador,
+                    "nick": nick, "x": x, "y": y
+                }) + "\n"
+                resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Cursor atualizado"}
 
         elif comando == "MATRIZ":
             resposta = {"comando": "ATUALIZAR_MAPA", "matriz": self.mapa.matriz}
