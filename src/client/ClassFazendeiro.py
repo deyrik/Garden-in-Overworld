@@ -26,6 +26,10 @@ class ClienteFazenda:
         dados = {"comando": "SAIR"}
         self.rede.manda_mensagem(json.dumps(dados))
 
+    def solicita_chat(self, mensagem):
+        dados = {"comando": "CHAT", "mensagem": mensagem}
+        self.rede.manda_mensagem(json.dumps(dados))
+
     def escutar_servidor(self):
         mensagem = self.rede.recebe_mensagem()
         

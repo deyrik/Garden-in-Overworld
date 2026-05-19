@@ -58,6 +58,16 @@ class ControladorFazenda:
         elif comando_recebido == "SAIR":
             resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Desconectando..."}
 
+        elif comando_recebido == "CHAT":
+            mensagem = dados.get("mensagem", "")
+            nick = self.gerenciador.slots[id_jogador].nick
+            broadcast = json.dumps({
+                "comando": "CHAT",
+                "autor": nick,
+                "mensagem": mensagem
+            }) + "\n"
+            resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Chat enviado"}
+
         else:
             resposta = {"comando": "RESPOSTA", "status": "ERRO", "mensagem": "Comando desconhecido"}
 
