@@ -60,8 +60,8 @@ class JanelaPrincipal(QMainWindow):
         ouvinte.sinal_chat_recebido.connect(self._widget_chat.adicionar_mensagem)
         ouvinte.sinal_desconectado.connect(self._on_desconectado)
 
-        # Mapa → Acoes
-        self._widget_mapa.sinal_celula_clicada.connect(self._widget_acoes.atualizar_para_celula)
+        # Mapa → Acoes: executa ação selecionada na célula clicada
+        self._widget_mapa.sinal_celula_clicada.connect(self._widget_acoes.executar_para_celula)
 
         # Acoes → Rede
         self._widget_acoes.sinal_plantar.connect(
