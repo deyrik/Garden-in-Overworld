@@ -32,6 +32,8 @@ CULTURAS_PRONTAS = {13, 14, 15, 16, 17, 18, 19}
 
 CULTURAS_CRESCENDO = {3, 4, 6, 7, 10, 11, 12}
 
+# Constantes importadas por ClassControlador para lógica de timers e colheita
+
 class Mapa:
     def __init__(self, linha=20, coluna=20):
         self.linha = linha
@@ -220,6 +222,8 @@ class Mapa:
         return (0 <= x < self.linha and 0 <= y < self.coluna) # se estiverem retorna true
 
     def verifica_compatibilidade(self, x, y, acao: int):
+        if not self.valida_posicao(x, y):
+            return False
         tile = self.matriz[x][y]
         if acao == 3:   # trigo: terra preparada
             return tile == 8
@@ -281,7 +285,9 @@ class Mapa:
             return False
         if not self.verifica_compatibilidade(x, y, cultura):
             return False
-        if not self.verifica_fertilidade(x, y, cultura):
+        # Apenas culturas que precisam de água próxima passam pela checagem de fertilidade
+        culturas_que_precisam_agua = {3, 4, 5, 6, 7, 12}
+        if cultura in culturas_que_precisam_agua and not self.verifica_fertilidade(x, y, cultura):
             return False
         tile = self.matriz[x][y]
         if cultura == 5:  # cana: escolhe variante por terreno
