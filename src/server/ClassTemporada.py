@@ -17,11 +17,12 @@ PRONTA_PARA_DEMANDA = {13: 3, 14: 4, 15: 6, 16: 6, 17: 10, 18: 11, 19: 12}
 class Temporada:
     """
     Gerencia uma temporada: demanda, progresso, timer regressivo.
-    Chama os callbacks ao_tick, ao_vitoria e ao_derrota.
+    Chama os callbacks ao_tick e ao_derrota.
+    Vitória é gerenciada externamente pelo ClassControlador via registrar_colheita().
     """
 
     def __init__(self, numero: int, num_jogadores: int,
-                 ao_tick, ao_vitoria, ao_derrota, ao_gelo=None):
+                 ao_tick, ao_derrota, ao_gelo=None):
         self.numero = numero
         self._lock = threading.Lock()
         nivel = min(numero, 4)
@@ -32,7 +33,6 @@ class Temporada:
         self.duracao = DURACAO_POR_TEMPORADA.get(nivel, 90)
         self._restante = self.duracao
         self._ao_tick = ao_tick
-        self._ao_vitoria = ao_vitoria
         self._ao_derrota = ao_derrota
         self._ao_gelo = ao_gelo
         self._timer = None
@@ -108,7 +108,6 @@ if __name__ == "__main__":
     t = Temporada(
         numero=1, num_jogadores=2,
         ao_tick=lambda r: ticks.append(r),
-        ao_vitoria=lambda: resultado.append("vitoria"),
         ao_derrota=lambda: resultado.append("derrota"),
     )
     # Testa demanda proporcional ao nº de jogadores
