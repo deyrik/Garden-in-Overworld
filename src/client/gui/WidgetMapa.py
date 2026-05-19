@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QGridLayout, QLabel
-from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtCore import pyqtSignal, Qt, QTimer
 from . import estilos
 
 CULTURAS_PRONTAS = {13, 14, 15, 16, 17, 18, 19}
@@ -13,6 +13,10 @@ class WidgetMapa(QWidget):
         self._tiles = {}
         self._pos_jogadores = {}  # slot -> (x, y)
         self._matriz = [[0] * 20 for _ in range(20)]
+        self._piscar_estado = True
+        self._timer_piscar = QTimer(self)
+        self._timer_piscar.timeout.connect(self._alternar_piscar)
+        self._timer_piscar.start(600)
         self._montar_grid()
 
     def _montar_grid(self):
@@ -34,7 +38,9 @@ class WidgetMapa(QWidget):
         if selecionado:
             borda = f"border: 2px solid {estilos.AMBAR};"
         elif valor in CULTURAS_PRONTAS:
-            borda = "border: 2px solid #00ff88;"
+            borda_cor = "#00ff88" if self._piscar_estado else "#ffff00"
+            borda = f"border: 2px solid {borda_cor};"
+            cor = "#1a4a1a" if self._piscar_estado else estilos.CORES_TILE.get(valor, "#2d5a27")
         else:
             borda = "border: 1px solid #1a1a1a;"
         return (
@@ -43,6 +49,13 @@ class WidgetMapa(QWidget):
             f"border-radius: 2px;"
             f"font-size: 18px;"
         )
+
+    def _alternar_piscar(self):
+        self._piscar_estado = not self._piscar_estado
+        for x in range(20):
+            for y in range(20):
+                if self._matriz[x][y] in CULTURAS_PRONTAS:
+                    self._aplicar_estilo(x, y, self._matriz[x][y], self._celula_selecionada == (x, y))
 
     def _aplicar_estilo(self, x, y, valor, selecionado=False):
         tile = self._tiles[(x, y)]
