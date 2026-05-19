@@ -6,6 +6,7 @@ class TCPCliente:
         self.endereco = host
         self.porta = port
         self.client_socket = None
+        self._buffer = ""
 
     def conecta_servidor(self):
         """Estabelece uma conexão TCP com o servidor."""
@@ -42,25 +43,24 @@ class TCPCliente:
             print("Não estava conectado ao servidor.")
 
     def recebe_mensagem(self):
-        """Lê strings da rede até encontrar uma quebra de linha."""
-        if self.client_socket:                                    
-            buffer_completo = ""
+        """Lê uma mensagem JSON da rede (terminada por \n).
+        Mantém buffer persistente para não descartar mensagens que chegam juntas no mesmo recv().
+        """
+        if self.client_socket:
             try:
-                while True:
+                while '\n' not in self._buffer:
                     pedaco = self.client_socket.recv(1024).decode()
                     if not pedaco:
                         print("Conexão com o servidor foi perdida.")
                         return None
-                        
-                    buffer_completo += pedaco
-                    if '\n' in buffer_completo: # Se o servidor mandou o \n, significa que o JSON terminou!
-                        break 
-                
-                partes = buffer_completo.split('\n', 1)
+                    self._buffer += pedaco
+
+                partes = self._buffer.split('\n', 1)
                 mensagem_final = partes[0].strip()
+                self._buffer = partes[1]  # preserva sobras para a próxima chamada
                 print(f"<< Recebido: {mensagem_final}")
                 return mensagem_final
-            except Exception as e:                                
+            except Exception as e:
                 print(f"Erro ao receber mensagem: {e}")
                 return None
         return None
