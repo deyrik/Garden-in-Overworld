@@ -86,10 +86,11 @@ class ClienteFazenda:
             elif comando_servidor == "INICIO_TEMPORADA":
                 return {
                     "tipo": "INICIO_TEMPORADA",
-                    "numero": dados.get("numero"),
-                    "demanda": dados.get("demanda"),
-                    "restante": dados.get("restante"),
-                    "estoque": dados.get("estoque"),
+                    "temporada": dados.get("temporada"),
+                    "nome": dados.get("nome", ""),
+                    "demanda": dados.get("demanda", {}),
+                    "restante": dados.get("restante", 0),
+                    "estoque": dados.get("estoque", {}),
                 }
 
             elif comando_servidor == "TICK_TIMER":

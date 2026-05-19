@@ -49,11 +49,12 @@ class WidgetHUD(QWidget):
         self._label_temporada.setText(f"🌱 {nome} — T{numero}")
 
         demanda = dados.get("demanda", {})
-        # Limpar barras antigas
-        for i in reversed(range(self._layout_barras.count())):
-            w = self._layout_barras.itemAt(i).widget()
+        # Limpar barras antigas de forma síncrona
+        while self._layout_barras.count():
+            item = self._layout_barras.takeAt(0)
+            w = item.widget()
             if w:
-                w.deleteLater()
+                w.setParent(None)
         self._barras.clear()
 
         for cultura_str, meta in demanda.items():

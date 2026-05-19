@@ -37,6 +37,7 @@ class JanelaPrincipal(QMainWindow):
         self._timer_toast = QTimer(self)
         self._timer_toast.setSingleShot(True)
         self._timer_toast.timeout.connect(self._toast.hide)
+        self._ultima_temporada_tutorial = 0
 
         self._montar_layout()
         self._conectar_sinais(ouvinte)
@@ -170,8 +171,9 @@ class JanelaPrincipal(QMainWindow):
         nome = dados.get("nome", "")
         self._widget_log.adicionar_evento(f"🌱 Temporada {numero} — {nome} iniciada!")
         self._mostrar_toast(f"🌱 Temporada {numero} — {nome}!", "info")
-        # Tutorial: completo na T1, resumo de novidades nas T2, T3 e T4
-        if numero <= 4:
+        # Tutorial: uma vez por temporada (guard evita múltiplos dialogs)
+        if numero != self._ultima_temporada_tutorial and numero <= 4:
+            self._ultima_temporada_tutorial = numero
             dlg = DialogTutorial(numero, self)
             dlg.exec()
 
