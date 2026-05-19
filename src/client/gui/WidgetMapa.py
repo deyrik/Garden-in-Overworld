@@ -35,7 +35,11 @@ class WidgetMapa(QWidget):
 
     def _estilo_tile(self, valor, selecionado=False):
         cor = estilos.CORES_TILE.get(valor, "#2d5a27")
-        if selecionado:
+        if selecionado and valor in CULTURAS_PRONTAS:
+            # Célula selecionada E pronta: fundo dourado chamativo
+            cor = "#b8860b" if self._piscar_estado else "#ffd700"
+            borda = "border: 2px solid #ffffff;"
+        elif selecionado:
             borda = f"border: 2px solid {estilos.AMBAR};"
         elif valor in CULTURAS_PRONTAS:
             borda_cor = "#00ff88" if self._piscar_estado else "#ffff00"
