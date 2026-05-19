@@ -3,6 +3,7 @@ import ClassUser as usManager
 import ClassControlador as ctrl
 import ClassServidorTCP as tcpS
 import ClassEstoque as est
+import ClassAnunciadorUDP as udp
 
 PORTA_TCP = 12345
 
@@ -17,6 +18,9 @@ if __name__ == "__main__":
 
     print("--- CONECTANDO AS CAMADAS ---")
     controlador = ctrl.ControladorFazenda(mapa_jogo, gerenciador, estoque)
+
+    anunciador = udp.AnunciadorUDP(porta_tcp=PORTA_TCP)
+    anunciador.start()
 
     servidor = tcpS.ServidorTCP(
         host="0.0.0.0",
