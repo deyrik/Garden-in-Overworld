@@ -119,12 +119,15 @@ class JanelaPrincipal(QMainWindow):
         self._fazendeiro.solicita_cursor(x, y)
         self._widget_acoes.executar_para_celula(x, y, valor)
 
-    def _on_resposta(self, status, mensagem, cultura):
-        if status == "OK" and cultura is not None:
-            self._widget_acoes.atualizar_semente_na_mao(cultura)
-        elif status == "OK" and "plantada" in mensagem.lower():
-            # semente foi usada
-            self._widget_acoes.atualizar_semente_na_mao(None)
+    def _on_resposta(self, status, mensagem, extra):
+        if status == "OK":
+            if isinstance(extra, dict):
+                cultura = extra.get("cultura")
+                quantidade = extra.get("quantidade", 0)
+            else:
+                cultura = extra
+                quantidade = 1 if cultura is not None else 0
+            self._widget_acoes.atualizar_semente_na_mao(cultura, quantidade)
 
     def _on_inicio_temporada(self, dados: dict):
         self._widget_hud.atualizar_temporada(dados)

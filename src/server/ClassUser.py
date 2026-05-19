@@ -1,7 +1,8 @@
 class User:
     def __init__(self, nick):
         self.nick = nick
-        self.semente_na_mao = None  # int ou None: cultura que o jogador pegou do estoque
+        self.semente_na_mao = None  # int ou None: cultura que o jogador tem na mão
+        self.quantidade_na_mao = 0  # int: quantas sementes dessa cultura
         self.posicao = None          # (x, y) ou None: tile selecionado no mapa
 
 

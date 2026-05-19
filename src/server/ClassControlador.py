@@ -196,11 +196,19 @@ class ControladorFazenda:
                 resposta = {"comando": "RESPOSTA", "status": "ERRO",
                             "mensagem": "Jogador nao encontrado"}
             elif self.estoque.pegar(cultura):
-                jogador.semente_na_mao = cultura
+                if jogador.semente_na_mao == cultura:
+                    jogador.quantidade_na_mao += 1
+                else:
+                    # Devolve cultura anterior ao estoque se havia outra
+                    if jogador.semente_na_mao is not None:
+                        self.estoque.repor(jogador.semente_na_mao, jogador.quantidade_na_mao)
+                    jogador.semente_na_mao = cultura
+                    jogador.quantidade_na_mao = 1
                 snap = self.estoque.snapshot()
                 broadcast = json.dumps({"comando": "ATUALIZAR_ESTOQUE", "estoque": snap}) + "\n"
                 resposta = {"comando": "RESPOSTA", "status": "OK",
-                            "mensagem": f"Semente {cultura} na mao", "cultura": cultura}
+                            "mensagem": f"Semente {cultura} na mao",
+                            "cultura": cultura, "quantidade": jogador.quantidade_na_mao}
             else:
                 resposta = {"comando": "RESPOSTA", "status": "ERRO",
                             "mensagem": "Sem sementes desse tipo"}
@@ -213,18 +221,25 @@ class ControladorFazenda:
                 resposta = {"comando": "RESPOSTA", "status": "ERRO",
                             "mensagem": "Sem semente na mao"}
             elif self.mapa.plantar(x, y, semente):
-                jogador.semente_na_mao = None
+                jogador.quantidade_na_mao -= 1
+                qtd_restante = jogador.quantidade_na_mao
+                if qtd_restante <= 0:
+                    jogador.semente_na_mao = None
+                    jogador.quantidade_na_mao = 0
                 cultura_plantada = self.mapa.matriz[x][y]
                 self._iniciar_timer_crescimento(x, y, cultura_plantada)
                 broadcast = json.dumps({
                     "comando": "ATUALIZAR_CELULA", "x": x, "y": y, "valor": cultura_plantada
                 }) + "\n"
-                resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Plantado"}
+                resposta = {"comando": "RESPOSTA", "status": "OK", "mensagem": "Plantado",
+                            "cultura": semente if qtd_restante > 0 else None,
+                            "quantidade": qtd_restante}
             else:
-                # Devolve a semente ao estoque; semente nunca é 5 na prática
-                # pois PEGAR_SEMENTE com chave 5 sempre falha (5 não está no estoque)
                 self.estoque.repor(semente)
-                jogador.semente_na_mao = None
+                jogador.quantidade_na_mao -= 1
+                if jogador.quantidade_na_mao <= 0:
+                    jogador.semente_na_mao = None
+                    jogador.quantidade_na_mao = 0
                 resposta = {"comando": "RESPOSTA", "status": "ERRO",
                             "mensagem": "Nao foi possivel plantar ai"}
 
