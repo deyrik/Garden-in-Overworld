@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QGroupBox, QVBoxLayout, QHBoxLayout,
-                             QPushButton, QLabel, QSpinBox, QFrame)
+                             QPushButton, QLabel, QSpinBox, QFrame, QWidget)
 from PyQt6.QtCore import pyqtSignal
 from . import estilos
 
