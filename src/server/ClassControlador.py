@@ -152,6 +152,9 @@ class ControladorFazenda:
         tile_pronto = self.mapa.matriz[x][y]
         if self._broadcast:
             self._broadcast(json.dumps({
+                "comando": "ATUALIZAR_CELULA", "x": x, "y": y, "valor": tile_pronto
+            }) + "\n")
+            self._broadcast(json.dumps({
                 "comando": "CULTURA_PRONTA", "x": x, "y": y, "valor": tile_pronto
             }) + "\n")
 

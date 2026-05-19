@@ -229,7 +229,7 @@ class Mapa:
             return tile == 8
         elif acao == 4:  # arroz: agua
             return tile == 1
-        elif acao == 5:  # cana: terra ou areia preparada (legado, usa 6/7 internamente)
+        elif acao in (5, 6, 7):  # cana: terra ou areia preparada
             return tile in (8, 9)
         elif acao == 10: # milho: terra preparada
             return tile == 8
@@ -286,11 +286,11 @@ class Mapa:
         if not self.verifica_compatibilidade(x, y, cultura):
             return False
         # Apenas culturas que precisam de água próxima passam pela checagem de fertilidade
-        culturas_que_precisam_agua = {3, 4, 5, 6, 7, 12}
+        culturas_que_precisam_agua = {3, 4, 12}
         if cultura in culturas_que_precisam_agua and not self.verifica_fertilidade(x, y, cultura):
             return False
         tile = self.matriz[x][y]
-        if cultura == 5:  # cana: escolhe variante por terreno
+        if cultura in (5, 6, 7):  # cana: escolhe variante por terreno
             self.matriz[x][y] = 6 if tile == 8 else 7
         else:
             self.matriz[x][y] = cultura
