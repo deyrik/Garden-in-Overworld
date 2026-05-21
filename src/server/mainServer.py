@@ -1,14 +1,25 @@
 from models import ClassMapa as map
 from models import ClassUser as usManager
 from controllers import ClassControlador as ctrl
-from views import ClassServidorTCP as tcpS
+from controllers import ClassServidorTCP as tcpS
 from views import ClassMapaViewTerminal as mapaV
+import random
 
 
 if __name__ == "__main__":
-    print("--- INICIALIZANDO MUNDO ---")
+    #print("--- INICIALIZANDO MUNDO ---")
     mapa_jogo = map.Mapa()
-    mapa_jogo.gerar_mapa_aleatorio(direcao="horizontal")
+
+    #aleatorizando mapa 
+    num_oasis = random.randint(3, 6)
+    direcao = random.choice(["horizontal", "vertical"])
+    num_nascentes = random.randint(3, 6)
+    prob_areia = random.uniform(0.3, 0.5)  # Probabilidade de cada célula ser areia
+    num_pocas = random.randint(3, 6)
+    maxtam_pocas = random.randint(2, 4)
+
+    mapa_jogo.gerar_mapa_aleatorio(num_oasis, direcao, num_nascentes, 
+                                   prob_areia, num_pocas, maxtam_pocas)
     mapaV.MapaView.exibir_colorido(mapa_jogo.matriz)
 
     gerenciador = usManager.GerenciadorUsers()
