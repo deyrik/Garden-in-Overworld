@@ -13,11 +13,36 @@ NC:
 
 
 #cria 4 terminais fisicamente separados e 4 clientes:
-4C:
+5C:
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
+
+
+
+all_local:
+# 1. Mata o servidor local (nativo) antigo sem o pkill se matar no processo
+	pkill -f "[m]ainServer.py" || true
+
+# 2. Garante que o container Docker antigo não esteja ocupando a porta 12345
+	sudo docker rm -f farm_server || true
+    
+# 3. Liga o servidor local no fundo e dá 1 segundo para ele respirar
+	bash -c "source .venv/bin/activate && python src/server/mainServer.py &"
+	sleep 1
+    
+# 4. Dispara os 4 clientes em segundo plano
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
+
+
+
+
 
 #---------------------------------DOCKER--------------------------------------------------------------
 #docker new server:
