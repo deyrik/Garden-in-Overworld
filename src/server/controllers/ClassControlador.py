@@ -100,7 +100,7 @@ class ControladorFazenda:
 
             comando_recebido = str(dados.get("comando", "")).strip().upper()
 
-            # O Roteador (Dispatcher)
+
             if comando_recebido == "NICKNAME":
                 resposta, broadcast = self.resposta_nickname(id_jogador, dados)
 
