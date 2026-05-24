@@ -1,3 +1,7 @@
 __pycache__
 Data/
-.venv/
+
+# PyInstaller
+dist/
+build/
+*.spec

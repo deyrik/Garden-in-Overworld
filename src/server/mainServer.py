@@ -1,28 +1,40 @@
-from models import ClassMapa as map
-from models import ClassUser as usManager
-from controllers import ClassControlador as ctrl
-from views import ClassServidorTCP as tcpS
-from views import ClassMapaViewTerminal as mapaV
+import ClassMapa as mapa_mod
+import ClassUser as usManager
+import ClassControlador as ctrl
+import ClassServidorTCP as tcpS
+import ClassEstoque as est
+import ClassAnunciadorUDP as udp
 
+PORTA_TCP = 12345
 
 if __name__ == "__main__":
     print("--- INICIALIZANDO MUNDO ---")
-    mapa_jogo = map.Mapa()
-    mapa_jogo.gerar_mapa_aleatorio(direcao="horizontal")
-    mapaV.MapaView.exibir_colorido(mapa_jogo.matriz)
+    mapa_jogo = mapa_mod.Mapa()
+    mapa_jogo.gerar_mapa_aleatorio()
+    mapa_jogo.exibe_colorido()
 
     gerenciador = usManager.GerenciadorUsers()
-    
+    estoque = est.Estoque()
+
     print("--- CONECTANDO AS CAMADAS ---")
-    controlador = ctrl.ControladorFazenda(mapa_jogo, gerenciador)
-    
-    # Cria a Rede e injeta os gatilhos(callbacks, funções de resposta) do controlador
+    controlador = ctrl.ControladorFazenda(mapa_jogo, gerenciador, estoque)
+
+    anunciador = udp.AnunciadorUDP(porta_tcp=PORTA_TCP)
+    anunciador.start()
+
     servidor = tcpS.ServidorTCP(
-        host="localhost", 
-        port=12345,
+        host="0.0.0.0",
+        port=PORTA_TCP,
         ao_conectar=controlador.conecta_jogador,
+        ao_gerar_boas_vindas=controlador.gera_boas_vindas,
         ao_receber_mensagem=controlador.processa_mensagem,
         ao_desconectar=controlador.desconecta_jogador
     )
-    
+
+    # Injeta broadcast no controlador APÓS criar o servidor
+    controlador.registrar_broadcast(servidor.enviar_broadcast)
+
+    # Inicia a primeira temporada
+    controlador.iniciar_temporada(1)
+
     servidor.start()

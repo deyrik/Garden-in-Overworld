@@ -15,7 +15,7 @@ class ClienteFazenda:
         self.rede.manda_mensagem(json.dumps(dados))
 
     def solicita_colher(self, cultura, x, y):
-        dados = {"comando": "COLHER", "cultura": cultura, "x": x, "y": y}
+        dados = {"comando": "COLHER", "x": x, "y": y}
         self.rede.manda_mensagem(json.dumps(dados))
 
     def solicita_matriz(self):
@@ -24,6 +24,23 @@ class ClienteFazenda:
 
     def solicita_sair(self):
         dados = {"comando": "SAIR"}
+        self.rede.manda_mensagem(json.dumps(dados))
+
+    def solicita_chat(self, mensagem):
+        dados = {"comando": "CHAT", "mensagem": mensagem}
+        self.rede.manda_mensagem(json.dumps(dados))
+
+    def solicita_preparar(self, x, y):
+        dados = {"comando": "PREPARAR", "x": x, "y": y}
+        self.rede.manda_mensagem(json.dumps(dados))
+
+    def solicita_pegar_semente(self, cultura: int, quantidade: int = 1):
+        dados = json.dumps({"comando": "PEGAR_SEMENTE", "cultura": cultura})
+        for _ in range(max(1, quantidade)):
+            self.rede.manda_mensagem(dados)
+
+    def solicita_cursor(self, x, y):
+        dados = {"comando": "CURSOR", "x": x, "y": y}
         self.rede.manda_mensagem(json.dumps(dados))
 
     def escutar_servidor(self):
@@ -52,11 +69,74 @@ class ClienteFazenda:
             elif comando_servidor == "RESPOSTA":
                 # Respostas de sistema (BEM_VINDO, OK (de plantio), ERRO, SAIR)
                 return {
-                    "tipo": "RESPOSTA_SISTEMA", 
-                    "status": dados.get("status"), 
+                    "tipo": "RESPOSTA_SISTEMA",
+                    "status": dados.get("status"),
+                    "mensagem": dados.get("mensagem"),
+                    "cultura": dados.get("cultura"),
+                    "quantidade": dados.get("quantidade", 0)
+                }
+
+            elif comando_servidor == "CHAT":
+                return {
+                    "tipo": "CHAT",
+                    "autor": dados.get("autor"),
                     "mensagem": dados.get("mensagem")
                 }
-            
+
+            elif comando_servidor == "INICIO_TEMPORADA":
+                return {
+                    "tipo": "INICIO_TEMPORADA",
+                    "temporada": dados.get("temporada"),
+                    "nome": dados.get("nome", ""),
+                    "demanda": dados.get("demanda", {}),
+                    "restante": dados.get("restante", 0),
+                    "estoque": dados.get("estoque", {}),
+                }
+
+            elif comando_servidor == "TICK_TIMER":
+                return {"tipo": "TICK_TIMER", "restante": dados.get("restante")}
+
+            elif comando_servidor == "ATUALIZAR_ESTOQUE":
+                return {"tipo": "ATUALIZAR_ESTOQUE", "estoque": dados.get("estoque")}
+
+            elif comando_servidor == "ATUALIZAR_PROGRESSO":
+                return {
+                    "tipo": "ATUALIZAR_PROGRESSO",
+                    "progresso": dados.get("progresso"),
+                    "demanda": dados.get("demanda"),
+                }
+
+            elif comando_servidor == "CULTURA_PRONTA":
+                return {
+                    "tipo": "CULTURA_PRONTA",
+                    "x": dados.get("x"),
+                    "y": dados.get("y"),
+                    "valor": dados.get("valor"),
+                }
+
+            elif comando_servidor == "POSICAO_JOGADOR":
+                return {
+                    "tipo": "POSICAO_JOGADOR",
+                    "id": dados.get("id"),
+                    "nick": dados.get("nick"),
+                    "x": dados.get("x"),
+                    "y": dados.get("y"),
+                }
+
+            elif comando_servidor == "VITORIA":
+                return {"tipo": "VITORIA", "temporada": dados.get("temporada")}
+
+            elif comando_servidor == "DERROTA":
+                return {"tipo": "DERROTA", "temporada": dados.get("temporada")}
+
+            elif comando_servidor == "AVISO_GELO":
+                return {
+                    "tipo": "AVISO_GELO",
+                    "x": dados.get("x"),
+                    "y": dados.get("y"),
+                    "segundos": dados.get("segundos"),
+                }
+
             else:
                 print(f"[!] Aviso: Comando do servidor não reconhecido: {dados}")
                 return {"tipo": "IGNORAR"}
