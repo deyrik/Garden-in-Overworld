@@ -152,39 +152,6 @@ Para jogar entre máquinas diferentes:
 
 ---
 
-## Execução via Docker
-
-Para rodar em containers isolados (requer Docker e Docker Compose instalados):
-
-### Permissão de vídeo (Linux)
-
-```bash
-xhost +local:docker
-```
-
-### Subir servidor e primeiro cliente
-
-```bash
-sudo docker-compose up --build
-```
-
-### Adicionar mais jogadores
-
-```bash
-sudo docker run -it --net=host -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix:ro garden-in-overworld_client1:latest
-```
-
-### Atalhos Docker via Makefile
-
-| Comando            | O que faz                                      |
-|--------------------|------------------------------------------------|
-| `make docker_NS`   | Cria e liga um novo servidor                   |
-| `make docker_CS`   | Encerra o servidor ativo                       |
-| `make docker_NC`   | Abre um novo cliente em container              |
-| `make docker_all`  | Reinicia toda a topologia (servidor + cliente) |
-
----
-
 ## Arquitetura
 
 ```
