@@ -101,3 +101,19 @@ def test_enviar_chat_persiste_e_faz_broadcast():
     s.enviar_chat(idj, "ola mundo")
     assert ("Alice", "ola mundo") in s.banco.mensagens
     assert ("chat", "Alice", "ola mundo") in s.notificador.chamadas
+
+
+def test_vitoria_dispara_uma_unica_vez():
+    # Colher após a meta já atingida não pode disparar uma segunda vitória.
+    s = montar_servidor()
+    idj, _ = s.entrar("Alice", callback=object())
+    s.temporada = Temporada(numero=1, num_jogadores=1,
+                            ao_tick=lambda r: None, ao_derrota=lambda: None)
+    s.temporada.demanda = {3: 1}       # vence com 1 trigo
+    s.temporada.progresso = {3: 0}
+    s.mapa.matriz[0][0] = 13           # trigo pronto
+    s.mapa.matriz[0][1] = 13           # outro trigo pronto
+    s.colher(idj, 0, 0)                # atinge a meta -> vitória
+    s.colher(idj, 0, 1)                # colheita extra na janela -> sem nova vitória
+    vitorias = [c for c in s.notificador.chamadas if c[0] == "vitoria"]
+    assert len(vitorias) == 1

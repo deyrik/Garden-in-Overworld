@@ -40,6 +40,18 @@ class ServidorJardim:
         self.temporada = None
         self._timers_crescimento = {}
         self._lock_timers = threading.Lock()
+        # Garante que a temporada seja encerrada (vitória OU derrota) uma só vez,
+        # mesmo com colheitas concorrentes ou colheitas após a meta atingida.
+        self._lock_temporada = threading.Lock()
+        self._temporada_resolvida = False
+
+    def _resolver_temporada(self):
+        """Retorna True apenas para o primeiro chamador que encerra a temporada atual."""
+        with self._lock_temporada:
+            if self._temporada_resolvida:
+                return False
+            self._temporada_resolvida = True
+            return True
 
     # -------------------------------------------------------------------------
     # Conexão
@@ -132,7 +144,7 @@ class ServidorJardim:
             vitoria = self.temporada.registrar_colheita(tile_pronto)
             estado = self.temporada.get_estado()
             self.notificador.atualizar_progresso(estado["progresso"], estado["demanda"])
-            if vitoria:
+            if vitoria and self._resolver_temporada():
                 numero = self.temporada.numero
                 self.temporada.parar()
                 self._ao_vitoria(numero)
@@ -163,12 +175,14 @@ class ServidorJardim:
         num_jogadores = sum(1 for v in self.gerenciador.slots.values() if v is not None)
         if self.temporada:
             self.temporada.parar()
+        with self._lock_temporada:
+            self._temporada_resolvida = False
         self.estoque.inicializar(numero)
         self.temporada = Temporada(
             numero=numero,
             num_jogadores=num_jogadores,
             ao_tick=self._ao_tick_temporada,
-            ao_derrota=self._ao_derrota,
+            ao_derrota=lambda n=numero: self._ao_derrota(n),
             ao_gelo=self._ao_gelo if numero >= 4 else None,
         )
         self.temporada.iniciar()
@@ -196,11 +210,12 @@ class ServidorJardim:
         t.daemon = True
         t.start()
 
-    def _ao_derrota(self):
-        numero_atual = self.temporada.numero if self.temporada else 1
-        print(f"[JOGO] Derrota na temporada {numero_atual}.")
-        self.notificador.derrota(numero_atual)
-        t = threading.Timer(5.0, lambda: self.iniciar_temporada(numero_atual))
+    def _ao_derrota(self, numero):
+        if not self._resolver_temporada():
+            return
+        print(f"[JOGO] Derrota na temporada {numero}.")
+        self.notificador.derrota(numero)
+        t = threading.Timer(5.0, lambda: self.iniciar_temporada(numero))
         t.daemon = True
         t.start()
 
