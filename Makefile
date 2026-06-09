@@ -8,9 +8,13 @@ CLIENT  = src/client/gui/main.py
 install:
 	python3 -m venv $(VENV)
 	$(PIP) install --upgrade pip
-	$(PIP) install PyQt6
+	$(PIP) install PyQt6 Pyro5 pytest
 
-# Novo Servidor
+# Name Server do Pyro5 (subir ANTES do servidor)
+NAMESERVER: $(VENV)
+	$(PYTHON) -m Pyro5.nameserver
+
+# Novo Servidor (registra-se no Name Server)
 NS: $(VENV)
 	$(PYTHON) $(SERVER)
 
@@ -25,8 +29,11 @@ NC: $(VENV)
 		xterm -e "$(PYTHON) $(CLIENT); bash" & \
 	done
 
-# Sobe servidor em background + 5 clientes
+# Sobe Name Server + servidor + 5 clientes na ordem correta
 all_local: $(VENV)
+	gnome-terminal -- bash -c "$(PYTHON) -m Pyro5.nameserver; exec bash" 2>/dev/null || \
+	xterm -e "$(PYTHON) -m Pyro5.nameserver; bash" &
+	sleep 2
 	gnome-terminal -- bash -c "$(PYTHON) $(SERVER); exec bash" 2>/dev/null || \
 	xterm -e "$(PYTHON) $(SERVER); bash" &
 	sleep 1
@@ -37,11 +44,11 @@ $(VENV):
 	@echo "Venv não encontrado. Execute 'make install' primeiro."
 	@exit 1
 
-# Mata o servidor (libera a porta 12345)
-KS:
-	@lsof -ti:12345 | xargs kill 2>/dev/null && echo "Servidor encerrado." || echo "Nenhum servidor rodando."
+# Roda a suíte de testes
+test: $(VENV)
+	$(PYTHON) -m pytest -v
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null; true
 
-.PHONY: install NS NC 5C all_local KS clean
+.PHONY: install NAMESERVER NS NC 5C all_local test clean
