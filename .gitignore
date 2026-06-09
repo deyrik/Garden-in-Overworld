@@ -9,3 +9,6 @@ venv/
 dist/
 build/
 *.spec
+
+# Banco de dados SQLite gerado em tempo de execução
+garden.db
