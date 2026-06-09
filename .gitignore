@@ -1,6 +1,10 @@
 __pycache__
 Data/
 
+# Ambientes virtuais
+.venv/
+venv/
+
 # PyInstaller
 dist/
 build/
