@@ -48,7 +48,12 @@ $(VENV):
 test: $(VENV)
 	$(PYTHON) -m pytest -v
 
+# Encerra o servidor e o Name Server
+KS:
+	@pkill -f "mainServer.py" 2>/dev/null && echo "Servidor encerrado." || echo "Nenhum servidor rodando."
+	@pkill -f "Pyro5.nameserver" 2>/dev/null && echo "Name Server encerrado." || echo "Nenhum Name Server rodando."
+
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null; true
 
-.PHONY: install NAMESERVER NS NC 5C all_local test clean
+.PHONY: install NAMESERVER NS NC 5C all_local test KS clean
