@@ -1,3 +1,6 @@
+PYRO5_IP = 127.0.0.1
+PYRO5_PORTA = 9090
+
 #limpa todos arquivos __pycache__ 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
@@ -7,21 +10,22 @@ NS:
 # 1. Mata qualquer Name Server ou Servidor antigo sem o pkill se matar
 	pkill -f "[p]yro5-ns" || true
 	pkill -f "[m]ainServer.py" || true
+
 	
-# 2. Liga a Lista Telefônica (Name Server) no fundo e espera 1 segundo
-	bash -c "source .venv/bin/activate && \
-	pyro5-ns &"
+# 2. Liga a (Name Server) no fundo e espera 1 segundo
+	bash -c "source .venv/bin/activate && pyro5-ns -n $(PYRO5_IP) -p $(PYRO5_PORTA) &"
 	sleep 1
 	
 # 3. Liga o Servidor do Jogo na tela atual
-	bash -c "source .venv/bin/activate && python src/server/mainServer.py"
+	bash -c "source .venv/bin/activate && python src/server/mainServer.py $(PYRO5_IP) $(PYRO5_PORTA)"
+
 
 #new client:
 NC:
-	python src/client/mainCliente.py
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py $(PYRO5_IP) $(PYRO5_PORTA)"
 
 
-#cria 4 terminais fisicamente separados e 4 clientes:
+#cria 5 terminais fisicamente separados e 5 clientes:
 5C:
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
@@ -31,7 +35,7 @@ NC:
 
 
 
-# Automação total (Se você ainda for usar para testar os 4 clientes de uma vez):
+# Automação total (Se você ainda for usar para testar os 5 clientes de uma vez):
 all_local:
 	pkill -f "[p]yro5-ns" || true
 	pkill -f "[m]ainServer.py" || true
@@ -44,7 +48,8 @@ all_local:
 	bash -c "source .venv/bin/activate && python src/server/mainServer.py &"
 	sleep 1
 	
-# Dispara os 4 clientes
+# Dispara os 5 clientes
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
@@ -53,8 +58,7 @@ all_local:
 
 
 
-#---------------------------------DOCKER--------------------------------------------------------------
-#docker new server:
+#---------------------------------DOCKER--------------------------------------------------------------#docker new server:
 docker_NS:
 	sudo docker rm -f farm_server || true
 	sudo docker run -d --name farm_server --net host garden-in-overworld_server:latest 
