@@ -29,7 +29,7 @@ if __name__ == "__main__":
     daemon = Pyro5.api.Daemon()#Cria o Daemon, e quem atende as chamadas de rede no Pyro5
     ns = Pyro5.api.locate_ns()#Busca o Name Server, que é o serviço de diretório do Pyro5
     uri = daemon.register(controlador)#Registra o nosso controlador no Daemon (ganha um endereço de memória/URI)
-    ns.register("fazenda.servidor", uri) #Anota esse endereço físico na Lista Telefônica com um nome lógico e fácil
+    ns.register("fazenda.servidor", uri) #Anota esse endereço físico na lista  do pyro  um nome lógico e fácil
 
     
     print("Servidor RMI online e registrado como 'fazenda.servidor'")
