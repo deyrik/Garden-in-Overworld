@@ -54,6 +54,7 @@ Com o ambiente virtual ativado, instale as dependências da interface gráfica:
 ```bash
 pip install --upgrade pip
 pip install PyQt6
+pip install Pyro5
 ```
 
 ## Execução Local (Makefile ou Manual)
