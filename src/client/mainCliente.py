@@ -1,44 +1,40 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QDialog
-from models import ClassTCPCliente as TCPc
+from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox
 from models import ClassFazendeiro as Fazendeiro
 from views import ClassGUI as gui
-from controllers import ClassOuvinte as Ouvinte
 from controllers import ClassControladorCliente as CtrlCliente
 
 def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
 
-    #tela de login para escolher o nickname
     login_screen = gui.LoginDialog()
     if login_screen.exec() != QDialog.DialogCode.Accepted:
         sys.exit()    
     nickname_escolhido = login_screen.get_nickname()
 
-    #cria a janela principal do jogo
+    # Cria a janela e tenta conectar via RMI
     window = gui.GameWindow()
-
-    #cria socket TCP e o fazendeiro
-    cliente = TCPc.TCPCliente("localhost", 12345)
-    cliente.conecta_servidor()
-    fazendeiro = Fazendeiro.ClienteFazenda(cliente)
+    fazendeiro = Fazendeiro.ClienteFazenda()
     
-    #cria thread de escuta e o controlador, e liga os sinais do controlador
+    if not fazendeiro.servidor:
+        QMessageBox.critical(None, "Erro Crítico", "Não foi possível encontrar a Fazenda no Name Server. O servidor está ligado?")
+        sys.exit()
+
+    # Tenta entrar no jogo
+    resposta_login = fazendeiro.solicita_nickname(nickname_escolhido)
+    if resposta_login and resposta_login.get("status") == "ERRO":
+        QMessageBox.critical(None, "Acesso Negado", resposta_login.get("mensagem", "Erro desconhecido"))
+        sys.exit()
+
+    window.log_message("Sistema", resposta_login.get("mensagem", "Conectado!"))
+
+    # Liga os motores do controlador (cliques e o timer de atualização)
     controlador = CtrlCliente.ControladorCliente(window, fazendeiro)
-    thread_escuta = Ouvinte.OuvinteThread(fazendeiro)
-    
-    #Ligar os sinais do Controller
-    controlador.iniciar_conexoes(thread_escuta)
+    controlador.iniciar_conexoes()
 
-    #Mostra a janela e inicia a thread de escuta do servidor
+    app.aboutToQuit.connect(fazendeiro.solicita_sair)## Avisa ao RMI para liberar o slot instantes antes do programa fechar
     window.show()
-    thread_escuta.start()
-
-    #Envia os comandos iniciais assim que conecta
-    fazendeiro.solicita_nickname(nickname_escolhido)
-    fazendeiro.solicita_matriz()
-
     sys.exit(app.exec())
 
 if __name__ == "__main__":

@@ -4,8 +4,17 @@ clean:
 
 #new server:
 NS:
-	sudo docker rm -f farm_server || true
-	python src/server/mainServer.py
+# 1. Mata qualquer Name Server ou Servidor antigo sem o pkill se matar
+	pkill -f "[p]yro5-ns" || true
+	pkill -f "[m]ainServer.py" || true
+	
+# 2. Liga a Lista Telefônica (Name Server) no fundo e espera 1 segundo
+	bash -c "source .venv/bin/activate && \
+	pyro5-ns &"
+	sleep 1
+	
+# 3. Liga o Servidor do Jogo na tela atual
+	bash -c "source .venv/bin/activate && python src/server/mainServer.py"
 
 #new client:
 NC:
@@ -22,24 +31,24 @@ NC:
 
 
 
+# Automação total (Se você ainda for usar para testar os 4 clientes de uma vez):
 all_local:
-# 1. Mata o servidor local (nativo) antigo sem o pkill se matar no processo
+	pkill -f "[p]yro5-ns" || true
 	pkill -f "[m]ainServer.py" || true
-
-# 2. Garante que o container Docker antigo não esteja ocupando a porta 12345
-	sudo docker rm -f farm_server || true
-    
-# 3. Liga o servidor local no fundo e dá 1 segundo para ele respirar
+	
+# Liga o Name Server
+	bash -c "source .venv/bin/activate && pyro5-ns &"
+	sleep 1
+	
+# Liga o Servidor do Jogo no fundo
 	bash -c "source .venv/bin/activate && python src/server/mainServer.py &"
 	sleep 1
-    
-# 4. Dispara os 4 clientes em segundo plano
+	
+# Dispara os 4 clientes
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
 	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
-	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
-
 
 
 
