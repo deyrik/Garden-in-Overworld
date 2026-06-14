@@ -27,13 +27,11 @@ NC:
 
 #cria 5 terminais fisicamente separados e 5 clientes:
 5C:
-	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
-	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
-	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
-	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
-	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
-
-
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py $(PYRO5_IP) $(PYRO5_PORTA) > /dev/null 2>&1 &"
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py $(PYRO5_IP) $(PYRO5_PORTA) > /dev/null 2>&1 &"
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py $(PYRO5_IP) $(PYRO5_PORTA) > /dev/null 2>&1 &"
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py $(PYRO5_IP) $(PYRO5_PORTA) > /dev/null 2>&1 &"
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py $(PYRO5_IP) $(PYRO5_PORTA) > /dev/null 2>&1 &"
 
 # Automação total (Se você ainda for usar para testar os 5 clientes de uma vez):
 all_local:
@@ -48,30 +46,7 @@ all_local:
 	bash -c "source .venv/bin/activate && python src/server/mainServer.py &"
 	sleep 1
 	
-# Dispara os 5 clientes
-	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
-	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
-	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
-	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
-	bash -c "source .venv/bin/activate && python src/client/mainCliente.py > /dev/null 2>&1 &"
+# Chama regra 5C para criar 5 clientes
+	make 5C
 
 
-
-
-#---------------------------------DOCKER--------------------------------------------------------------#docker new server:
-docker_NS:
-	sudo docker rm -f farm_server || true
-	sudo docker run -d --name farm_server --net host garden-in-overworld_server:latest 
-
-#docker close server:
-docker_CS:
-	sudo docker rm -f farm_server || true
-
-#docker new client:
-docker_NC:
-	sudo docker run -it --net=host -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix:ro garden-in-overworld_client1:latest
-
-docker_all:
-	sudo docker rm -f farm_server || true
-	sudo docker run -d --name farm_server --net host garden-in-overworld_server:latest 
-	sudo docker run -it --net=host -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix:ro garden-in-overworld_client1:latest
