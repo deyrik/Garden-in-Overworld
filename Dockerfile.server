@@ -1,5 +1,0 @@
-FROM python:3.10-alpine
-WORKDIR /app
-COPY src/server/ ./src/server/
-EXPOSE 12345
-CMD ["python", "src/server/mainServer.py"]
