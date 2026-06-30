@@ -1,0 +1,2126 @@
+\documentclass[aspectratio=169]{beamer}
+\usetheme{default}
+\usecolortheme{beaver}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{tabularx}
+\usepackage{tikz}
+\usetikzlibrary{arrows, positioning}
+\usepackage[most]{tcolorbox}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{headline}{}
+\setbeamertemplate{footline}[frame number]
+\setbeamerfont{frametitle}{size=\large}
+
+\lstdefinestyle{json}{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=none,
+  showstringspaces=false,
+  columns=fullflexible
+}
+\lstdefinestyle{pycode}{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=none,
+  showstringspaces=false,
+  columns=fullflexible,
+  language=Python
+}
+
+\title{Garden-in-Overworld}
+\subtitle{Sistema Cliente/Servidor com Sockets TCP -- CCF 355}
+\author{Gabriel P\'adua (4705) \and Lucas Silva (4689) \and \'Alvaro Neto (5095)}
+\institute{UFV -- Campus Florestal \\ Bacharelado em Ci\^encia da Computa\c{c}\~ao}
+\date{Junho 2026}
+
+\begin{document}
+
+\section{Apresenta\c{c}\~ao}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Roteiro (1/2)}
+  \footnotesize
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{1. Fundamentos da Comunica\c{c}\~ao} \\
+    \quad O que \'e? $\cdot$ Funcionalidades $\cdot$ Contexto \\
+    \quad Protocolo $\cdot$ Sess\~ao exemplo \\
+    \quad Modelo F\'isico $\cdot$ Modelo de Intera\c{c}\~ao
+    \vfill
+    \textbf{2. Serializa\c{c}\~ao e Mensagens} \\
+    \quad Estrat\'egias $\cdot$ Serializa\c{c}\~ao \\
+    \quad Framing $\cdot$ Pipeline \\
+    \quad Comandos Cliente $\cdot$ Eventos Servidor
+    \vfill
+    \textbf{3. Arquitetura do Servidor} \\
+    \quad Vis\~ao Geral $\cdot$ Arquitetura Geral \\
+    \quad SRP $\cdot$ Diagrama \\
+    \quad Socket TCP $\cdot$ Thread-per-Connection \\
+    \quad Despachante $\cdot$ Timers $\cdot$ Slots \\
+    \quad Arq. Multithreaded $\cdot$ Falhas \\
+    \quad Race Condition
+    \column{0.48\textwidth}
+    \textbf{4. Funcionalidades do Jogo} \\
+    \quad Mundo $\cdot$ Estados \\
+    \quad RF01--RF08 (Inicializa\c{c}\~ao, Plantio, \\
+    \quad \hfill Valida\c{c}\~ao, Colheita, Broadcast) \\
+    \quad Func. Adicionais $\cdot$ Rastreabilidade \\
+    \quad Casos de Uso UC01--UC10 \\
+    \quad (Identificar, Mapa, Plantar, Colher, \\
+    \quad \hfill Preparar, Semente, Chat, Cursor)
+    \vfill
+    \textbf{5. Cliente e Interface Gr\'afica} \\
+    \quad Vis\~ao Geral $\cdot$ TCP \\
+    \quad Proxy Manual $\cdot$ RMI \\
+    \quad Terminal $\cdot$ C\'opia Local \\
+    \quad GUI PyQt6 $\cdot$ MVC \\
+    \quad Widgets $\cdot$ Di\'alogos \\
+    \quad OuvinteThread $\cdot$ Eventos $\cdot$ Controller
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Roteiro (2/2)}
+  \footnotesize
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{6. Descoberta de Servidor} \\
+    \quad Motiva\c{c}\~ao $\cdot$ UDP vs TCP \\
+    \quad AnunciadorUDP $\cdot$ DialogConexao
+    \vfill
+    \textbf{7. Temporadas} \\
+    \quad Ciclo $\cdot$ Demanda \\
+    \quad Implementa\c{c}\~ao $\cdot$ Geada $\cdot$ Transi\c{c}\~ao
+    \vfill
+    \textbf{8. Conceitos Avan\c{c}ados de SD} \\
+    \quad Mapa de Conceitos $\cdot$ M\'etricas \\
+    \quad Idempot\^encia $\cdot$ Transpar\^encia \\
+    \quad Exce\c{c}\~oes $\cdot$ Consist\^encia \\
+    \quad RMI vs Sockets $\cdot$ Middleware
+    \vfill
+    \textbf{9. Limita\c{c}\~oes e Trab. Futuros} \\
+    \quad Race Condition $\cdot$ Falhas \\
+    \quad Persist\^encia $\cdot$ Protocolo \\
+    \quad Sincroniza\c{c}\~ao $\cdot$ Robustez \\
+    \quad Seguran\c{c}a $\cdot$ Arquitetura
+    \column{0.48\textwidth}
+    \textbf{10. Execu\c{c}\~ao} \\
+    \quad Pr\'e-requisitos $\cdot$ Docker \\
+    \quad Servidor $\cdot$ Cliente \\
+    \quad Multi-m\'aquina $\cdot$ Makefile
+    \vfill
+    \textbf{11. Evolu\c{c}\~ao e Conclus\~ao} \\
+    \quad Branches $\cdot$ Front-End $\cdot$ Middleware \\
+    \quad Commits $\cdot$ Reposit\'orio \\
+    \quad O que foi constru\'ido $\cdot$ Desafios \\
+    \quad SD Aplicados $\cdot$ Li\c{c}\~oes $\cdot$ C\'odigo
+  \end{columns}
+\end{frame}
+
+\section{Fundamentos da Comunica\c{c}\~ao}
+
+\begin{frame}{O que \'e o Garden-in-Overworld?}
+  \begin{itemize}
+    \item Jogo de fazenda \textbf{multiplayer} em tempo real inspirado em Minecraft
+    \item Mapa compartilhado (matriz 20$\times$20) com 3 biomas: terra, \'agua, areia
+    \item 4 temporadas com demandas de colheita e timer regressivo
+    \item At\'e \textbf{4 jogadores simult\^aneos} cooperam para cumprir metas
+  \end{itemize}
+  \vfill
+  \begin{exampleblock}{Tecnologias}
+    Python 3.10+ -- Sockets TCP -- JSON -- PyQt6 -- Threads
+  \end{exampleblock}
+\end{frame}
+
+\begin{frame}{Funcionalidades Principais}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}p{9cm}}
+    \toprule
+    \textbf{Funcionalidade} & \textbf{Descri\c{c}\~ao} \\
+    \midrule
+    Mapa procedural & Matriz 20$\times$20 gerada aleatoriamente com terra, \'agua, areia \\
+    Plantio/colheita & 6 tipos de cultura com regras de solo e tempo de crescimento \\
+    Temporadas & 4 esta\c{c}\~oes com demandas crescentes e eventos clim\'aticos \\
+    Estoque global & Sementes compartilhadas entre jogadores (thread-safe) \\
+    Chat integrado & Comunica\c{c}\~ao entre jogadores via broadcast \\
+    Descoberta UDP & Servidor se anuncia automaticamente na LAN \\
+    GUI PyQt6 & Interface gr\'afica com padr\~ao MVC e 14 eventos em tempo real \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Contexto Acad\^emico}
+  \begin{itemize}
+    \item Disciplina: \textbf{Sistemas Distribu\'idos} (CCF 355) -- UFV Campus Florestal
+    \item Objetivo do TP: construir um sistema C/S usando exclusivamente \textbf{sockets TCP}
+    \item Sem middleware RMI/CORBA -- toda comunica\c{c}\~ao manual
+    \item Requisitos: Ubuntu 22.04, Python 3.10+, PyQt6, Makefile ou Docker
+  \end{itemize}
+  \vfill
+  \begin{block}{Reposit\'orio}
+    \url{https://github.com/deyrik/Garden-in-Overworld}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Vis\~ao Geral do Protocolo}
+  \begin{itemize}
+    \item Formato: \textbf{JSON} (UTF-8)
+    \item Framing: delimitador \texttt{\textbackslash n} no fluxo TCP
+    \item Codifica\c{c}\~ao: \texttt{json.dumps()} $\rightarrow$ \texttt{.encode()} $\rightarrow$ bytes
+    \item Decodifica\c{c}\~ao: \texttt{.decode()} $\rightarrow$ \texttt{json.loads()} $\rightarrow$ dict
+  \end{itemize}
+  \vfill
+  \begin{block}{Problema do TCP}
+    TCP \'e orientado a fluxo: n\~ao preserva fronteiras de mensagem. Uma chamada \texttt{recv()} pode retornar parte de uma mensagem, v\'arias mensagens juntas, ou uma mensagem inteira. O framing resolve isso.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Exemplo de Sess\~ao Completa}
+\begin{lstlisting}[style=json, basicstyle=\ttfamily\scriptsize]
+C-->S: {"comando":"NICKNAME","nome":"Alice"}
+S-->C: {"comando":"RESPOSTA","status":"OK","mensagem":"Bem-vindo, Alice"}
+S-->C: {"comando":"INICIO_TEMPORADA","temporada":1,"nome":"Primavera",
+         "demanda":{"3":6,"4":3,"6":5},"restante":180}
+C-->S: {"comando":"MATRIZ"}
+S-->C: {"comando":"ATUALIZAR_MAPA","matriz":[[0,0,0,1,0,2,...]]}
+C-->S: {"comando":"PREPARAR","x":5,"y":10}
+S-->C: {"comando":"RESPOSTA","status":"OK","mensagem":"Solo preparado"}
+C-->S: {"comando":"PLANTAR","semente":3,"x":5,"y":10}
+S-->C: {"comando":"RESPOSTA","status":"OK","mensagem":"Plantio realizado"}
+S-->todos: {"comando":"ATUALIZAR_CELULA","x":5,"y":10,"valor":3}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Modelo F\'isico}
+  \begin{block}{Classifica\c{c}\~ao: \textbf{early} (``modelo de come\c{c}o'')}
+    \begin{itemize}
+      \item Rede local (LAN)
+      \item Poucos n\'os: m\'aximo 4 clientes + 1 servidor
+      \item Heterogeneidade limitada
+    \end{itemize}
+  \end{block}
+
+  \vfill
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{Topologia: Estrela (C/S)}
+    \begin{itemize}
+      \item Servidor autoritativo em \texttt{0.0.0.0:12345}
+      \item Binding em \texttt{0.0.0.0} permite acesso LAN
+      \item Se fosse \texttt{localhost}: apenas mesma m\'aquina
+    \end{itemize}
+    \column{0.48\textwidth}
+    \textbf{Camadas L\'ogicas}
+    \begin{itemize}
+      \item Apresenta\c{c}\~ao: GUI PyQt6
+      \item Middleware: TCP + JSON + Threads
+      \item SO: Linux (sockets, threads)
+      \item Hardware: CPU, RAM, rede
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Modelo de Intera\c{c}\~ao}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{Lat\^encia: Alta import\^ancia}
+    \begin{itemize}
+      \item Jogo interativo: atrasos causam desconforto
+      \item Gerenciada pelo TCP + rede local
+      \item Sem garantias adicionais de QoS
+    \end{itemize}
+    \textbf{Largura de Banda: Baixa}
+    \begin{itemize}
+      \item Tr\'afego de pequenos pacotes JSON
+      \item N\~ao exige alta capacidade
+    \end{itemize}
+    \column{0.48\textwidth}
+    \textbf{Jitter: Baixa import\^ancia}
+    \begin{itemize}
+      \item A\c{c}\~oes discretas na horta
+      \item Varia\c{c}\~ao n\~ao quebra experi\^encia
+    \end{itemize}
+    \textbf{S\'incrono vs Ass\'incrono}
+    \begin{itemize}
+      \item \textbf{Ass\'incrono}: processos com velocidades diferentes, atrasos de rede
+      \item S\'o seria s\'incrono com controle total da malha
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\section{Serializa\c{c}\~ao e Mensagens}
+
+\begin{frame}{Estrat\'egias de Serializa\c{c}\~ao}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3cm}c>{\raggedright\arraybackslash}p{4cm}>{\raggedright\arraybackslash}p{3cm}}
+    \toprule
+    \textbf{Estrat\'egia} & \textbf{Status} & \textbf{Vantagens} & \textbf{Desvantagens} \\
+    \midrule
+    Bin\'aria (CORBA CDR) & N\~ao usada & Eficiente/compacta & N\~ao leg\'ivel, fora do escopo \\
+    Java Serialization & N\~ao usada & Autom\'atica & Dependente de Java \\
+    XML & N\~ao usada & Leg\'ivel, schema XSD & Verboso, maior overhead \\
+    \textbf{JSON} & \textbf{Usada} & Leg\'ivel, nativo Python & Sem schema formal, overhead \\
+    \bottomrule
+  \end{tabular}
+  \vfill
+  \textbf{Trade-off:} JSON \'e conciso e de f\'acil depura\c{c}\~ao, mas n\~ao possui valida\c{c}\~ao formal de tipos (IDL/schema). O protocolo \'e auto-descritivo em nomes de campos, mas a estrutura n\~ao \'e formalizada.
+\end{frame}
+
+\begin{frame}{Serializa\c{c}\~ao e Representa\c{c}\~ao Externa}
+  \begin{itemize}
+    \item \textbf{Empacotamento:} dict $\rightarrow$ \texttt{json.dumps()} $\rightarrow$ string $\rightarrow$ \texttt{.encode()} $\rightarrow$ bytes
+    \item \textbf{Desempacotamento:} bytes $\rightarrow$ \texttt{.decode()} $\rightarrow$ \texttt{json.loads()} $\rightarrow$ dict
+  \end{itemize}
+  \vfill
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3cm}>{\raggedright\arraybackslash}p{2cm}>{\raggedright\arraybackslash}p{3cm}>{\raggedright\arraybackslash}p{3cm}}
+    \toprule
+    \textbf{Estrat\'egia} & \textbf{Status} & \textbf{Vantagens} & \textbf{Desvantagens} \\
+    \midrule
+    Bin\'aria (CORBA CDR) & N\~ao usada & Eficiente/compacta & N\~ao leg\'ivel \\
+    Java Serialization & N\~ao usada & Autom\'atica & Dependente de Java \\
+    XML & N\~ao usada & Leg\'ivel, schema & Verboso \\
+    \textbf{JSON} & \textbf{Usada} & \textbf{Simples, nativo} & \textbf{Sem schema formal} \\
+    \bottomrule
+  \end{tabular}
+  \vfill
+  \begin{itemize}
+    \item JSON \'e auto-descritivo em nomes de campos, mas sem valida\c{c}\~ao formal de tipos (IDL)
+    \item Recursos locais (sockets) n\~ao s\~ao serializados; apenas dados trafegam
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Framing por Delimitador}
+  \textbf{L\'ogica do buffer de recep\c{c}\~ao:}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\footnotesize]
+def recebe_mensagem(self):
+    while self.buffer.find(b"\n") == -1:
+        dados = self.socket.recv(1024)
+        if not dados:
+            return None  # desconexao
+        self.buffer += dados
+    msg, self.buffer = self.buffer.split(b"\n", 1)
+    return msg.decode("utf-8")
+\end{lstlisting}
+  \vfill
+  \textbf{Propriedades:}
+  \begin{itemize}
+    \item Simples e funcional para o escopo
+    \item Fragilidade: se o JSON contiver \texttt{\textbackslash n}, quebra
+    \item Alternativa: framing por tamanho (header bin\'ario com n\'umero de bytes)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Pipeline de Serializa\c{c}\~ao}
+  \begin{center}
+    \footnotesize
+    \texttt{Objeto Python} $\xrightarrow{\text{json.dumps}}$ \texttt{String JSON} $\xrightarrow{\text{.encode()}}$ \texttt{Bytes UTF-8} $\xrightarrow{\text{sendall()}}$ \texttt{Rede}
+    
+    \vspace{0.5cm}
+    \texttt{Rede} $\xrightarrow{\text{recv()}}$ \texttt{Bytes} $\xrightarrow{\text{.decode()}}$ \texttt{String JSON} $\xrightarrow{\text{json.loads()}}$ \texttt{Objeto Python}
+  \end{center}
+  \vfill
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{Empacotamento (cliente):}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\footnotesize]
+msg = {"comando":"PLANTAR",
+       "semente":3,"x":5,"y":10}
+socket.sendall(
+    json.dumps(msg).encode() + b"\n")
+\end{lstlisting}
+    \column{0.48\textwidth}
+    \textbf{Desempacotamento (servidor):}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\footnotesize]
+msg_str = buffer.decode("utf-8")
+dados = json.loads(msg_str)
+comando = dados["comando"]
+semente = dados["semente"]
+\end{lstlisting}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Comandos do Cliente (C $\rightarrow$ S)}
+\begin{lstlisting}[style=json, basicstyle=\ttfamily\small]
+{"comando":"NICKNAME","nome":"..."}
+{"comando":"MATRIZ"}
+{"comando":"PLANTAR","semente":3,"x":1,"y":2}
+{"comando":"COLHER","x":1,"y":2}
+{"comando":"PREPARAR","x":1,"y":2}
+{"comando":"PEGAR_SEMENTE","cultura":3}
+{"comando":"CURSOR","x":5,"y":7}
+{"comando":"CHAT","mensagem":"ola"}
+{"comando":"SAIR"}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Eventos do Servidor (S $\rightarrow$ C)}
+\begin{lstlisting}[style=json, basicstyle=\ttfamily\small]
+{"comando":"RESPOSTA","status":"OK|ERRO","mensagem":"..."}
+{"comando":"ATUALIZAR_MAPA","matriz":[[...]]}
+{"comando":"ATUALIZAR_CELULA","x":1,"y":2,"valor":3}
+{"comando":"INICIO_TEMPORADA","temporada":1,"nome":"Primavera",
+ "demanda":{...},"restante":180}
+{"comando":"TICK_TIMER","restante":179}
+{"comando":"ATUALIZAR_ESTOQUE","estoque":{...}}
+{"comando":"ATUALIZAR_PROGRESSO","progresso":{...},"demanda":{...}}
+{"comando":"CULTURA_PRONTA","x":1,"y":2,"valor":13}
+{"comando":"POSICAO_JOGADOR","id":1,"nick":"...","x":5,"y":7}
+{"comando":"CHAT","autor":"...","mensagem":"ola"}
+{"comando":"VITORIA","temporada":1}
+{"comando":"DERROTA","temporada":1}
+{"comando":"AVISO_GELO","x":1,"y":2,"segundos":10}
+\end{lstlisting}
+\end{frame}
+
+\section{Arquitetura do Servidor}
+
+\begin{frame}{Servidor -- Vis\~ao Geral}
+  \begin{itemize}
+    \item Servidor \textbf{autoritativo}: todo estado do jogo passa por ele
+    \item Escuta em \texttt{0.0.0.0:12345} (todas as interfaces)
+    \item At\'e 4 conex\~oes simult\^aneas
+    \item Padr\~ao \textit{thread-per-connection}
+    \item Broadcast ap\'os cada altera\c{c}\~ao de estado
+  \end{itemize}
+  \vfill
+  \textbf{Tr\^es camadas funcionais:}
+  \begin{enumerate}
+    \item \textbf{Rede:} \texttt{ClassServidorTCP.py} -- socket, accept, threads, broadcast
+    \item \textbf{L\'ogica:} \texttt{ClassControlador.py} -- dispatch, regras, temporadas
+    \item \textbf{Estado:} \texttt{ClassMapa.py}, \texttt{ClassEstoque.py}, \texttt{ClassUser.py}, \texttt{ClassTemporada.py}
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Arquitetura Geral}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={rectangle, draw, rounded corners, minimum width=2.5cm, minimum height=0.8cm, align=center},
+    arrow/.style={->, thick}
+  ]
+    \node[box, fill=blue!20] (srv) at (0,0) {Servidor\\\texttt{0.0.0.0:12345}};
+    \node[box, fill=green!20] (c1) at (-4.2,-2.0) {Cliente 1\\PyQt6 GUI};
+    \node[box, fill=green!20] (c2) at (-1.4,-2.0) {Cliente 2\\PyQt6 GUI};
+    \node[box, fill=green!20] (c3) at (1.4,-2.0) {Cliente 3\\PyQt6 GUI};
+    \node[box, fill=green!20] (c4) at (4.2,-2.0) {Cliente 4\\PyQt6 GUI};
+    \draw[arrow] (c1) -- node[right] {TCP} (srv);
+    \draw[arrow] (c2) -- (srv);
+    \draw[arrow] (c3) -- (srv);
+    \draw[arrow] (c4) -- (srv);
+  \end{tikzpicture}
+  \end{center}
+  \begin{itemize}
+    \item Topologia: estrela -- servidor autoritativo central
+    \item Broadcast: servidor propaga atualiza\c{c}\~oes a todos
+    \item Descoberta: broadcast UDP opcional (porta 37020)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[shrink=8]{Arquitetura Desacoplada (SRP)}
+  \begin{block}{Princ\'ipio: cada classe faz uma \'unica coisa}
+    \footnotesize
+    \begin{tabular}{>{\raggedright\arraybackslash}p{3cm}>{\raggedright\arraybackslash}p{5cm}>{\raggedright\arraybackslash}p{3.5cm}}
+      \toprule
+      \textbf{Classe} & \textbf{\'Unica responsabilidade} & \textbf{Medidor} \\
+      \midrule
+      \texttt{ServidorTCP} & Aceitar conex\~oes, broadcast, tratamento de threads & 1 arquivo, 1 prop\'osito \\
+      \texttt{Controlador} & Despachar comandos JSON e orquestrar regras & 1 entry point de l\'ogica \\
+      \texttt{Mapa} & Manter matriz 20$\times$20 e validar regras de plantio & Estado centralizado \\
+      \texttt{Estoque} & Gerenciar sementes com exclus\~ao m\'utua (\texttt{Lock}) & Thread-safe isolado \\
+      \texttt{Temporada} & Timer, demanda, eventos de geada & Ciclo de vida isolado \\
+      \texttt{User} & Gerenciar slots de jogadores (1--4) & Mapeamento id $\leftrightarrow$ nick \\
+      \texttt{AnunciadorUDP} & Broadcast UDP peri\'odico de descoberta & Thread daemon separada \\
+      \bottomrule
+    \end{tabular}
+  \end{block}
+  \begin{exampleblock}{Acoplamento m\'inimo}
+    \texttt{Controlador} depende de interfaces (inje\c{c}\~ao de depend\^encia). Trocar \texttt{TCPCliente} por HTTP exigiria apenas trocar a camada de rede -- a l\'ogica de jogo permanece intacta.
+  \end{exampleblock}
+\end{frame}
+
+\begin{frame}{Arquitetura do Servidor}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={rectangle, draw, rounded corners, minimum width=2.8cm, minimum height=0.7cm, align=center, font=\small},
+    arrow/.style={->, thick}
+  ]
+    \node[box, fill=blue!20] (tcp) at (0,1.5) {ServidorTCP};
+    \node[box, fill=red!20] (ctrl) at (0,0) {Controlador};
+    \node[box, fill=green!20] (mapa) at (-2.5,-1.5) {Mapa};
+    \node[box, fill=green!20] (estoque) at (0,-1.5) {Estoque};
+    \node[box, fill=green!20] (temp) at (2.5,-1.5) {Temporada};
+    \node[box, fill=green!20] (user) at (-2.5,0) {User};
+    \node[box, fill=yellow!20] (udp) at (2.5,1.5) {AnunciadorUDP};
+    \draw[arrow] (tcp) -- (ctrl);
+    \draw[arrow] (ctrl) -- (mapa);
+    \draw[arrow] (ctrl) -- (estoque);
+    \draw[arrow] (ctrl) -- (temp);
+    \draw[arrow] (ctrl) -- (user);
+  \end{tikzpicture}
+  \end{center}
+  \begin{itemize}
+    \item \texttt{mainServer.py}: orquestra e inicia todas as camadas
+    \item Inje\c{c}\~ao de depend\^encia: callbacks \texttt{ao\_conectar}, \texttt{ao\_receber\_mensagem}, \texttt{ao\_desconectar}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile, shrink=8]{Servidor -- Socket TCP e Loop Accept}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\footnotesize]
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind(("0.0.0.0", 12345))
+server_socket.listen(4)  # fila de conexoes pendentes
+
+while True:
+    client_socket, addr = server_socket.accept()
+    id_jogador = self.ao_conectar()
+    if id_jogador is not None:
+        thread = threading.Thread(
+            target=self.trata_cliente,
+            args=(client_socket, id_jogador))
+        thread.start()
+    else:
+        client_socket.sendall(
+            b'{"status":"ERRO","mensagem":"Servidor cheio"}\n')
+        client_socket.close()
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile, shrink=8]{Thread-per-Connection -- Ciclo de Vida}
+  \textbf{Estados da thread (analogia Java $\leftrightarrow$ Python):}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{3cm}>{\raggedright\arraybackslash}p{6cm}}
+    \toprule
+    \textbf{Estado (Java)} & \textbf{Python} & \textbf{No TP} \\
+    \midrule
+    NEW & Criada & \texttt{threading.Thread(target=trata\_cliente)} \\
+    RUNNABLE & Pronta & \texttt{.start()} agenda pelo SO \\
+    RUNNING & Executando & \texttt{trata\_cliente()} rodando \\
+    BLOCKED & Bloqueada & \texttt{recv()} esperando dados do cliente \\
+    TERMINATED & Finalizada & Conex\~ao fechada, fun\c{c}\~ao retorna \\
+    \bottomrule
+  \end{tabular}
+  \vfill
+  \begin{lstlisting}[style=pycode, basicstyle=\ttfamily\footnotesize]
+def trata_cliente(self, cliente, id_jogador):
+    try:
+        while True:
+            mensagem = self.recebe_mensagem(cliente)
+            if not mensagem: break  # desconexao
+            resp, bcast = self.controlador.processa_mensagem(...)
+            cliente.sendall(resp.encode())
+            if bcast: self.enviar_broadcast(bcast)
+    finally:
+        cliente.close()
+        self.ao_desconectar(id_jogador)
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile, shrink=8]{Despachante de Comandos}
+  \texttt{ControladorFazenda.processa\_mensagem()} realiza 5 etapas:
+  \begin{enumerate}
+    \item \textbf{Recebimento:} socket entrega mensagem completa (framing)
+    \item \textbf{Desserializa\c{c}\~ao:} \texttt{json.loads()} converte string $\rightarrow$ dict
+    \item \textbf{Roteamento:} campo \texttt{comando} determina a\c{c}\~ao
+    \item \textbf{Execu\c{c}\~ao:} invoca regra no objeto servente
+    \item \textbf{Resposta:} serializa resultado $\rightarrow$ JSON + broadcast
+  \end{enumerate}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\scriptsize]
+def processa_mensagem(self, id_jogador, mensagem_str):
+    dados = json.loads(mensagem_str)
+    comando = str(dados.get("comando", "")).strip().upper()
+    if comando == "NICKNAME":
+        nome = dados.get("nome", "SemNome")
+        self.gerenciador.slots[id_jogador].nick = nome
+        resposta = {"comando":"RESPOSTA","status":"OK",
+                    "mensagem": f"Nickname: {nome}"}
+    elif comando == "PLANTAR":
+        ...
+    return json.dumps(resposta) + "\n", broadcast
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile, shrink=8]{Timers de Crescimento}
+  \begin{itemize}
+    \item Cada \texttt{PLANTAR} bem-sucedido inicia \texttt{threading.Timer}
+    \item Ao maturar: broadcast \texttt{CULTURA\_PRONTA\{x,y,valor\}}
+    \item Timers armazenados em dict e protegidos por \texttt{Lock}
+  \end{itemize}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\footnotesize]
+def _iniciar_timer_crescimento(self, x, y, cultura):
+    tempo = TEMPO_CRESCIMENTO.get(cultura, 30)
+    with self._lock_timers:
+        old = self._timers_crescimento.pop((x, y), None)
+    if old:
+        old.cancel()
+    timer = threading.Timer(
+        tempo, lambda: self._planta_maturou(x, y))
+    timer.daemon = True
+    with self._lock_timers:
+        self._timers_crescimento[(x, y)] = timer
+    timer.start()
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Gerenciamento de Slots e Jogadores}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{ClassUser.py:}
+    \begin{itemize}
+      \item 4 slots (\texttt{User[0..3]})
+      \item Cada \texttt{User}: \texttt{nick}, \texttt{id}, \texttt{x}, \texttt{y}
+      \item Aloca\c{c}\~ao: primeiro slot livre
+      \item Libera\c{c}\~ao: ao desconectar
+    \end{itemize}
+    \column{0.48\textwidth}
+    \textbf{ClassEstoque.py:}
+    \begin{itemize}
+      \item Dicion\'ario \texttt{cultura $\rightarrow$ quantidade}
+      \item Opera\c{c}\~oes protegidas por \texttt{Lock}
+      \item \texttt{pegar\_semente()} com \texttt{with self.lock:}
+      \item Broadcast ap\'os cada altera\c{c}\~ao
+    \end{itemize}
+  \end{columns}
+  \vfill
+  \begin{exampleblock}{Conceito de SD}
+    Exclus\~ao m\'utua em recurso compartilhado (estoque). A matriz (sem Lock) \'e a principal lacuna de concorr\^encia.
+  \end{exampleblock}
+\end{frame}
+
+\begin{frame}{Arquiteturas Multithreaded}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{4cm}c>{\raggedright\arraybackslash}p{7cm}}
+    \toprule
+    \textbf{Arquitetura} & \textbf{Status} & \textbf{Observa\c{c}\~ao} \\
+    \midrule
+    Thread-per-request & N\~ao & Cria thread a cada comando; n\~ao implementado \\
+    \textbf{Thread-per-connection} & \textbf{Sim} & Uma thread por cliente; bloqueia em \texttt{recv()} \\
+    Thread-per-object & N\~ao & Objetos remotos com fila dedicada; fora do escopo \\
+    \bottomrule
+  \end{tabular}
+  \vfill
+  \textbf{Justificativa:} Suficiente para 4 clientes. Cada thread bloqueia em E/S sem travar o servidor. Sincroniza\c{c}\~ao necess\'aria no estado compartilhado.
+\end{frame}
+
+\begin{frame}{Modelo de Falhas}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}p{9cm}}
+    \toprule
+    \textbf{Tipo de Falha} & \textbf{Comportamento no TP} \\
+    \midrule
+    \textbf{Queda (fail-stop)} & Cliente desconecta: \texttt{recv()} vazio $\rightarrow$ remove slot. Servidor falha: SPOF, todos perdem conex\~ao \\
+    \textbf{Omiss\~ao} & TCP garante entrega confi\'avel. Mas sem resposta do servidor: cliente fica bloqueado em \texttt{recv()} \\
+    \textbf{Temporiza\c{c}\~ao} & Nenhum timeout configurado. Cliente zumbi ocupa slot indefinidamente \\
+    \textbf{Autentica\c{c}\~ao} & N\~ao h\'a autentica\c{c}\~ao. Qualquer um que conhe\c{c}a IP/porta pode conectar \\
+    \bottomrule
+  \end{tabular}
+  \vfill
+  \begin{alertblock}{Seguran\c{c}a}
+    Mensagens em texto plano (JSON UTF-8) sobre TCP, sem criptografia, HMAC ou autentica\c{c}\~ao de origem.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{Race Condition e Consist\^encia}
+  \textbf{Cen\'ario de corrida (matriz sem Lock):}
+  \begin{enumerate}
+    \item Thread A: \texttt{plantar(0,0,3)} $\rightarrow$ \texttt{matriz[0][0]=3}
+    \item Thread B: \texttt{plantar(0,0,4)} $\rightarrow$ \texttt{matriz[0][0]=4}
+    \item Thread A l\^e \texttt{matriz[0][0]} e obt\'em 4 (broadcast inconsistente)
+  \end{enumerate}
+  \vfill
+  \textbf{Solu\c{c}\~ao:}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\footnotesize]
+self.lock_matriz = threading.Lock()
+def processa_mensagem(self, id_jogador, mensagem_str):
+    with self.lock_matriz:
+        # operacoes na matriz protegidas
+        ...
+\end{lstlisting}
+  Estoque protegido por \texttt{Lock} (\texttt{ClassEstoque.py}). Timers protegidos por \texttt{\_lock\_timers}. O GIL serializa bytecode, mas risco existe.
+\end{frame}
+
+\section{Funcionalidades do Jogo}
+
+\begin{frame}{Mundo do Jogo}
+  \textbf{Biomas:}
+  \begin{itemize}
+    \item \textbf{Terra (0):} solo padr\~ao, prepar\'avel para plantio
+    \item \textbf{\'Agua (1):} necess\'aria para arroz e culturas pr\'oximas
+    \item \textbf{Areia (2):} solo alternativo, prepar\'avel como terra
+  \end{itemize}
+  \vfill
+  \textbf{Culturas dispon\'iveis:}
+  \footnotesize
+  \begin{tabular}{lccl}
+    \toprule
+    \textbf{Cultura} & \textbf{ID} & \textbf{Tempo} & \textbf{Solo} \\
+    \midrule
+    Trigo  & 3  & 20s & Terra prep. + \'agua raio 2 \\
+    Arroz  & 4  & 35s & \'Agua \\
+    Cana   & 6  & 20s & Terra/areia preparada \\
+    Milho  & 10 & 40s & Terra preparada \\
+    Batata & 11 & 25s & Qualquer solo preparado \\
+    Tomate & 12 & 50s & Terra prep. + \'agua raio 2 \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Estados das C\'elulas}
+  \footnotesize
+  \begin{tabular}{ccl}
+    \toprule
+    \textbf{Valor} & \textbf{Estado} & \textbf{Descri\c{c}\~ao} \\
+    \midrule
+    0  & Terra & Solo padr\~ao, vazio \\
+    1  & \'Agua & Bioma aqu\'atico (n\~ao prepar\'avel) \\
+    2  & Areia & Solo alternativo \\
+    3  & Trigo & Plantado, em crescimento \\
+    4  & Arroz & Plantado, em crescimento \\
+    5  & Cana & Plantado, em crescimento \\
+    6  & Milho & Plantado, em crescimento \\
+    7  & Batata & Plantado, em crescimento \\
+    8  & Terra Prepr. & Solo preparado para plantio \\
+    9  & Areia Prepr. & Areia preparada para plantio \\
+    10+ & Maduro & Cultura pronta para colheita \\
+    \bottomrule
+  \end{tabular}
+  \begin{itemize}
+    \item Ao maturar: valor base + 10 (ex.: trigo 3 $\rightarrow$ 13)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Requisitos Funcionais (RF01--RF08)}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{c>{\raggedright\arraybackslash}X}
+    \toprule
+    \textbf{RF} & \textbf{Descri\c{c}\~ao / Implementa\c{c}\~ao} \\
+    \midrule
+    RF01 & Inicializar matriz 2D: \texttt{Mapa.\_\_init\_\_()}, \texttt{gerar\_mapa\_aleatorio()} \\
+    RF02 & Identificar usu\'ario: \texttt{NICKNAME} $\rightarrow$ \texttt{processa\_mensagem()} \\
+    RF03 & Status da matriz: \texttt{MATRIZ} $\rightarrow$ \texttt{ATUALIZAR\_MAPA} \\
+    RF04 & Plantar: \texttt{PLANTAR} $\rightarrow$ \texttt{Mapa.plantar()} + broadcast \\
+    RF05 & Validar solo/ocupa\c{c}\~ao: \texttt{valida\_posicao()}, \texttt{verifica\_compatibilidade()} \\
+    RF06 & Colher: \texttt{COLHER} $\rightarrow$ \texttt{Mapa.colher()} + broadcast \\
+    RF07 & Confirmar OK/erro: \texttt{RESPOSTA} com \texttt{status} e \texttt{mensagem} \\
+    RF08 & Broadcast: \texttt{enviar\_broadcast()} $\rightarrow$ \texttt{ATUALIZAR\_CELULA} \\
+    \bottomrule
+  \end{tabularx}
+\end{frame}
+
+\begin{frame}{RF01 -- Inicializa\c{c}\~ao da Matriz}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{Gera\c{c}\~ao Procedural}
+    \begin{itemize}
+      \item Matriz 20$\times$20 com 3 biomas
+      \item \'Agua: agrupada em manchas (blobs)
+      \item Areia: bordas da \'agua
+      \item Terra: todo o restante
+    \end{itemize}
+    \column{0.48\textwidth}
+    \textbf{C\'odigo:}
+    \begin{itemize}
+      \item \texttt{ClassMapa.\_\_init\_\_()}
+      \item \texttt{inicializa\_matriz()}
+      \item \texttt{gerar\_mapa\_aleatorio()}
+    \end{itemize}
+  \end{columns}
+  \vfill
+  \begin{exampleblock}{Conceito}
+    Estado autoritativo centralizado no servidor. Cliente nunca altera a matriz diretamente.
+  \end{exampleblock}
+\end{frame}
+
+\begin{frame}{RF02 a RF04 -- Identifica\c{c}\~ao, Consulta e Plantio}
+  \begin{description}[RF04 - Plantar]
+    \item[RF02 - NICKNAME] Cliente envia \texttt{NICKNAME} com nome. Servidor registra no slot e retorna dados da temporada/estoque. \texttt{Exce\c{c}\~ao:} servidor cheio.
+    \item[RF03 - MATRIZ] Cliente solicita \texttt{MATRIZ}. Servidor percorre toda a matriz e envia \texttt{ATUALIZAR\_MAPA} com snapshot completo (400 c\'elulas).
+    \item[RF04 - PLANTAR] Cliente envia \texttt{PLANTAR\{semente,x,y\}}. Servidor valida regras e, se OK, planta, inicia timer e faz broadcast.
+  \end{description}
+  \vfill
+  \textbf{Fluxo do PLANTAR:}
+  \texttt{NICKNAME} $\rightarrow$ \texttt{PEGAR\_SEMENTE} $\rightarrow$ \texttt{PREPARAR} $\rightarrow$ \texttt{PLANTAR} $\rightarrow$ broadcast + timer
+\end{frame}
+
+\begin{frame}{RF05 -- Valida\c{c}\~oes de Solo e Ocupa\c{c}\~ao}
+  \footnotesize
+  \begin{tabular}{lll}
+    \toprule
+    \textbf{M\'etodo} & \textbf{Fun\c{c}\~ao} & \textbf{Arquivo} \\
+    \midrule
+    \texttt{valida\_posicao()} & Coordenadas dentro da matriz & \texttt{ClassMapa.py} \\
+    \texttt{verifica\_compatibilidade()} & Cultura vs tipo de solo & \texttt{ClassMapa.py} \\
+    \texttt{valida\_acao()} & C\'elula desocupada, cultura v\'alida & \texttt{ClassMapa.py} \\
+    \bottomrule
+  \end{tabular}
+
+  \vfill
+  \textbf{Regras de Solo por Cultura:}
+  \footnotesize
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Cultura} & \textbf{Solo} & \textbf{Tempo} \\
+    \midrule
+    Trigo  & Terra prep. + \'agua raio 2 & 20s \\
+    Arroz  & \'Agua & 35s \\
+    Cana   & Terra/areia preparada & 20s \\
+    Milho  & Terra preparada & 40s \\
+    Batata & Qualquer solo preparado & 25s \\
+    Tomate & Terra prep. + \'agua raio 2 & 50s \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{RF06 a RF08 -- Colheita, Resposta e Broadcast}
+  \begin{description}[RF07 - Confirma\c{c}\~ao]
+    \item[RF06 - COLHER] Cliente envia \texttt{COLHER\{x,y\}}. Servidor verifica se h\'a cultura madura. Se OK: remove, adiciona ao progresso da temporada, faz broadcast.
+    \item[RF07 - RESPOSTA] Toda opera\c{c}\~ao retorna \texttt{\{status: OK|ERRO, mensagem: ...\}}. Cliente exibe na GUI/log.
+    \item[RF08 - Broadcast] Ap\'os altera\c{c}\~ao, servidor envia \texttt{ATUALIZAR\_CELULA\{x,y,valor\}} para todos os sockets ativos.
+  \end{description}
+  \vfill
+  \begin{alertblock}{Exce\c{c}\~oes tratadas}
+    \texttt{COLHER} em c\'elula vazia, \texttt{PLANTAR} em solo incompat\'ivel, servidor cheio, JSON malformado, comando desconhecido.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Funcionalidades Adicionais}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3cm}>{\raggedright\arraybackslash}p{9.5cm}}
+    \toprule
+    \textbf{Funcionalidade} & \textbf{Descri\c{c}\~ao} \\
+    \midrule
+    Temporadas & Ciclo de 4 esta\c{c}\~oes com demandas de colheita e timer regressivo \\
+    Estoque global & Sementes compartilhadas entre jogadores, protegido por \texttt{Lock} \\
+    Preparar solo & Comando \texttt{PREPARAR} transforma terra/areia em solo ar\'avel \\
+    Cursor do jogador & \texttt{CURSOR} com broadcast de posi\c{c}\~ao para outros jogadores \\
+    Chat & \texttt{CHAT} com broadcast para todos os jogadores \\
+    Geada (Inverno) & Evento peri\'odico que destrui cultura aleat\'oria \\
+    Vit\'oria/Derrota & Meta atingida ou timer zera $\rightarrow$ nova tentativa \\
+    Descoberta UDP & An\'uncio autom\'atico do servidor na LAN \\
+    Docker & Servidor conteinerizado com \texttt{docker-compose} \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Matriz de Rastreabilidade: RF $\leftrightarrow$ C\'odigo}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{2.8cm}l>{\raggedright\arraybackslash}p{5cm}}
+    \toprule
+    \textbf{Fun\c{c}\~ao} & \textbf{RF} & \textbf{Arquivo} \\
+    \midrule
+    Inicializar matriz & RF01 & \texttt{ClassMapa.py} \\
+    NICKNAME & RF02 & \texttt{ClassControlador.py} \\
+    MATRIZ & RF03 & \texttt{ClassControlador.py} \\
+    PLANTAR & RF04 & \texttt{ClassMapa.py} \\
+    Validar posi\c{c}\~ao/solo & RF05 & \texttt{ClassMapa.py} \\
+    COLHER & RF06 & \texttt{ClassMapa.py} \\
+    RESPOSTA OK/ERRO & RF07 & \texttt{ClassControlador.py} \\
+    Broadcast & RF08 & \texttt{ClassServidorTCP.py} \\
+    GUI PyQt6 & --- & \texttt{gui/} \\
+    Temporadas & --- & \texttt{ClassTemporada.py} \\
+    Estoque (Lock) & --- & \texttt{ClassEstoque.py} \\
+    Descoberta UDP & --- & \texttt{ClassAnunciadorUDP.py} \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Casos de Uso (UC01--UC10)}
+  \footnotesize
+  \begin{tabular}{c>{\raggedright\arraybackslash}p{3cm}>{\raggedright\arraybackslash}p{7.5cm}}
+    \toprule
+    \textbf{UC} & \textbf{A\c{c}\~ao} & \textbf{Exce\c{c}\~oes} \\
+    \midrule
+    UC01 & Identificar-se & Sess\~ao cheia (limite 4) \\
+    UC02 & Visualizar mapa & Falha de conex\~ao \\
+    UC03 & Plantar cultura & Ocupado, solo incompat\'ivel, sem sementes \\
+    UC04 & Colher cultura & Sem plantio para colher \\
+    UC05 & Receber atualiza\c{c}\~oes & --- (broadcast autom\'atico) \\
+    UC06 & Preparar solo & J\'a preparado, posi\c{c}\~ao inv\'alida \\
+    UC07 & Pegar semente & Cultura inv\'alida \\
+    UC08 & Enviar chat & --- \\
+    UC09 & Atualizar cursor & Coordenadas inv\'alidas \\
+    UC10 & Avan\c{c}ar temporada & Interno (autom\'atico) \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{UC01 -- Identificar-se}
+  \textbf{Ator:} Jogador
+  \vfill
+  \textbf{Fluxo Principal:}
+  \begin{enumerate}
+    \item Jogador informa nickname
+    \item Cliente envia \texttt{\{"comando":"NICKNAME","nome":"Alice"\}}
+    \item Servidor aloca slot (1--4) e registra \texttt{nome}
+    \item Servidor retorna \texttt{RESPOSTA\{OK\}} + dados da temporada atual + estoque
+  \end{enumerate}
+  \vfill
+  \textbf{Exce\c{c}\~oes:}
+  \begin{itemize}
+    \item \textbf{Servidor cheio:} 4 jogadores conectados $\rightarrow$ \texttt{RESPOSTA\{ERRO, "Servidor cheio"\}} + socket fechado
+  \end{itemize}
+  \vfill
+  \begin{block}{Conceito}
+    Identifica\c{c}\~ao de processos em SD. Cada jogador recebe um \texttt{id\_jogador} interno (1--4) que mapeia conex\~ao TCP $\leftrightarrow$ slot.
+  \end{block}
+\end{frame}
+
+\begin{frame}{UC02 e UC05 -- Visualizar Mapa e Receber Atualiza\c{c}\~oes}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{UC02 -- Visualizar Mapa}
+    \begin{enumerate}
+      \item Cliente envia \texttt{MATRIZ}
+      \item Servidor percorre matriz 20$\times$20
+      \item Envia \texttt{ATUALIZAR\_MAPA\{matriz:[...]\}}
+      \item Cliente renderiza grade colorida
+    \end{enumerate}
+    \column{0.48\textwidth}
+    \textbf{UC05 -- Atualiza\c{c}\~oes em Tempo Real}
+    \begin{enumerate}
+      \item Servidor altera estado (plantio/colheita)
+      \item Broadcast \texttt{ATUALIZAR\_CELULA\{x,y,valor\}}
+      \item Todos os clientes atualizam c\'elula
+    \end{enumerate}
+  \end{columns}
+  \vfill
+  \textbf{Conceitos:} Snapshot vs evento. UC02 = polling (sob demanda), UC05 = push (broadcast autom\'atico).
+\end{frame}
+
+\begin{frame}{UC03 e UC04 -- Plantar e Colher}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{UC03 -- Plantar}
+    \begin{enumerate}
+      \item Jogador seleciona cultura e posi\c{c}\~ao
+      \item Cliente envia \texttt{PLANTAR\{semente,x,y\}}
+      \item Servidor valida: posi\c{c}\~ao, solo, disponibilidade
+      \item Se OK: planta, inicia timer, broadcast
+    \end{enumerate}
+    \textbf{Exce\c{c}\~oes:} ocupado, solo inv\'alido, sem sementes, dist\^ancia da \'agua
+    \column{0.48\textwidth}
+    \textbf{UC04 -- Colher}
+    \begin{enumerate}
+      \item Jogador clica em cultura madura
+      \item Cliente envia \texttt{COLHER\{x,y\}}
+      \item Servidor verifica se h\'a cultura
+      \item Se OK: colhe, atualiza progresso, broadcast
+    \end{enumerate}
+    \textbf{Exce\c{c}\~oes:} c\'elula vazia, cultura n\~ao madura
+  \end{columns}
+\end{frame}
+
+\begin{frame}{UC06 e UC07 -- Preparar Solo e Pegar Semente}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{UC06 -- Preparar Solo}
+    \begin{enumerate}
+      \item Jogador seleciona a\c{c}\~ao ``Preparar'' e clica no mapa
+      \item Cliente envia \texttt{PREPARAR\{x,y\}}
+      \item Servidor altera c\'elula: terra 0 $\rightarrow$ 8, areia 2 $\rightarrow$ 9
+      \item Broadcast da altera\c{c}\~ao
+    \end{enumerate}
+    \textbf{Exce\c{c}\~ao:} c\'elula j\'a preparada, \'agua n\~ao prepar\'avel
+    \column{0.48\textwidth}
+    \textbf{UC07 -- Pegar Semente}
+    \begin{enumerate}
+      \item Jogador seleciona cultura no estoque
+      \item Cliente envia \texttt{PEGAR\_SEMENTE\{cultura\}}
+      \item Servidor decrementa estoque global (com \texttt{Lock})
+      \item Cliente adiciona \`a sua contagem local
+    \end{enumerate}
+    \textbf{Exce\c{c}\~ao:} cultura inv\'alida ou esgotada
+  \end{columns}
+\end{frame}
+
+\begin{frame}{UC08 a UC10 -- Chat, Cursor e Temporada}
+  \begin{description}[UC10 - Avan\c{c}ar Temporada]
+    \item[UC08 - Chat] Jogador digita mensagem $\rightarrow$ \texttt{CHAT\{mensagem\}} $\rightarrow$ servidor faz broadcast para todos.
+    \item[UC09 - Cursor] Jogador move mouse $\rightarrow$ \texttt{CURSOR\{x,y\}} $\rightarrow$ servidor broadcast da posi\c{c}\~ao. Exce\c{c}\~ao: coordenadas fora da matriz.
+    \item[UC10 - Temporada] Interno do servidor. Ao atingir demanda ou timer zerar, servidor avança/cicla temporada, broadcast do resultado.
+  \end{description}
+  \vfill
+  \textbf{Eventos disparados:}
+  \begin{itemize}
+    \item Vit\'oria: \texttt{VITORIA\{temporada\}} $\rightarrow$ pr\'oxima temporada em 5s
+    \item Derrota: \texttt{DERROTA\{temporada\}} $\rightarrow$ recome\c{c}a mesma temporada em 5s
+  \end{itemize}
+\end{frame}
+
+\section{Cliente e Interface Gr'afica}
+
+\begin{frame}{Cliente -- Vis\~ao Geral}
+  \begin{itemize}
+    \item Duas vers\~oes: \textbf{terminal} e \textbf{GUI PyQt6}
+    \item Camadas de software no cliente:
+  \end{itemize}
+  \vfill
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={rectangle, draw, rounded corners, minimum width=3.5cm, minimum height=0.7cm, align=center, font=\small},
+    arrow/.style={->, thick}
+  ]
+    \node[box, fill=red!20] (app) at (0,1.5) {Aplica\c{c}\~ao (Fazendeiro)};
+    \node[box, fill=blue!20] (proxy) at (0,0) {Proxy JSON (Fazendeiro)};
+    \node[box, fill=green!20] (tcp) at (0,-1.5) {TCP Cliente};
+    \draw[arrow] (app) -- (proxy);
+    \draw[arrow] (proxy) -- (tcp);
+  \end{tikzpicture}
+  \end{center}
+  \vfill
+  \begin{description}[TCP Cliente:]
+    \item[TCP Cliente:] \texttt{ClassTCPCliente.py} -- socket, \texttt{connect()}, \texttt{sendall()}, \texttt{recv()}, buffer
+    \item[Proxy:] \texttt{ClassFazendeiro.py} -- monta/desmonta JSON, proxy/stub manual
+    \item[Aplica\c{c}\~ao:] \texttt{mainCliente.py} ou \texttt{gui/main.py}
+  \end{description}
+\end{frame}
+
+\begin{frame}[fragile, shrink=8]{Cliente TCP -- Conex\~ao e Envio}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\footnotesize]
+class ClassTCPCliente:
+    def conecta_servidor(self, host, porta):
+        self.socket = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((host, porta))
+        self.buffer = b""
+
+    def manda_mensagem(self, mensagem):
+        self.socket.sendall(
+            mensagem.encode("utf-8"))
+
+    def recebe_mensagem(self):
+        while b"\n" not in self.buffer:
+            dados = self.socket.recv(4096)
+            if not dados:
+                return None  # desconexao
+            self.buffer += dados
+        msg, self.buffer = self.buffer.split(b"\n", 1)
+        return msg.decode("utf-8")
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile, shrink=15]{Proxy Manual -- ClassFazendeiro}
+  \textbf{4 fun\c{c}\~oes do proxy:}
+  \begin{enumerate}
+    \item \textbf{Empacotamento:} par\^ametros $\rightarrow$ dict $\rightarrow$ JSON
+    \item \textbf{Transmiss\~ao:} \texttt{sendall()} via TCP
+    \item \textbf{Espera s\'incrona:} bloqueia em \texttt{recv()}
+    \item \textbf{Desempacotamento:} JSON $\rightarrow$ dict $\rightarrow$ resposta
+  \end{enumerate}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\scriptsize]
+class ClienteFazenda:
+    def solicita_plantar(self, semente, x, y):
+        msg = {"comando":"PLANTAR",
+               "semente":semente,"x":x,"y":y}
+        self.rede.manda_mensagem(json.dumps(msg))
+
+    def escutar_servidor(self):
+        mensagem = self.rede.recebe_mensagem()
+        if not mensagem:
+            return {"tipo":"DESCONECTADO"}
+        dados = json.loads(mensagem)
+        comando = dados.get("comando")
+        if comando == "ATUALIZAR_CELULA":
+            return {"tipo":"CELULA",
+                    "x":dados["x"],"y":dados["y"],
+                    "valor":dados.get("valor",0)}
+        elif comando == "RESPOSTA":
+            return {"tipo":"RESPOSTA_SISTEMA",...}
+        ...
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Proxy Manual -- Analogia com RMI}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3cm}>{\raggedright\arraybackslash}p{4.5cm}>{\raggedright\arraybackslash}p{4.5cm}}
+    \toprule
+    \textbf{Etapa} & \textbf{RMI (ideal)} & \textbf{Garden (manual)} \\
+    \midrule
+    Empacotamento & Stub gerado & \texttt{json.dumps()} \\
+    Transmiss\~ao & ORB gerencia & \texttt{sendall()} \\
+    Despacho & Skeleton + Dispatcher & \texttt{processa\_mensagem()} \\
+    Resposta & ORB desserializa & \texttt{json.loads()} \\
+    Tratamento de falhas & Timeout/retry & \texttt{recv()} vazio \\
+    \bottomrule
+  \end{tabular}
+  \vfill
+  \begin{block}{Observa\c{c}\~ao}
+    O c\'odigo do proxy (\texttt{ClassFazendeiro}) e do despachante (\texttt{ClassControlador}) substituem o que em RMI seria gerado automaticamente por um IDL compiler.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Cliente Terminal}
+  \begin{itemize}
+    \item \texttt{mainCliente.py}: entry point do cliente terminal
+    \item Fluxo:
+  \end{itemize}
+  \begin{enumerate}
+    \item Descoberta UDP (3s de escuta) ou IP manual
+    \item Cria \texttt{ClassTCPCliente} e conecta
+    \item Cria \texttt{ClassFazendeiro} (proxy)
+    \item Inicia \texttt{ClassOuvinte} (thread daemon para eventos)
+    \item Loop de comandos no terminal
+  \end{enumerate}
+  \vfill
+  \textbf{Execu\c{c}\~ao:}
+  \begin{itemize}
+    \item \texttt{make NC} $\rightarrow$ cliente GUI
+    \item \texttt{python3 src/client/mainCliente.py <IP>} $\rightarrow$ cliente terminal
+    \item \texttt{make 5C} $\rightarrow$ 5 terminais (s\'o 4 conectam)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{C\'opia Local do Mapa}
+  \begin{itemize}
+    \item O cliente mant\'em uma \textbf{c\'opia local n\~ao autoritativa} da matriz
+    \item Usada para renderiza\c{c}\~ao no terminal (ANSI) e na GUI
+    \item Atualizada via:
+    \begin{itemize}
+      \item \texttt{ATUALIZAR\_MAPA} (snapshot completo ao conectar)
+      \item \texttt{ATUALIZAR\_CELULA} (eventos de broadcast)
+    \end{itemize}
+    \item N\~ao persiste entre sess\~oes
+  \end{itemize}
+  \vfill
+  \begin{alertblock}{Conceito}
+    O cliente nunca altera o estado autoritativo. Toda escrita passa pelo servidor. A c\'opia local \'e apenas para visualiza\c{c}\~ao.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{GUI PyQt6 -- Vis\~ao Geral}
+  \begin{itemize}
+    \item Interface gr\'afica constru\'ida com \textbf{PyQt6}
+    \item Padr\~ao \textbf{MVC} (Model-View-Controller)
+    \item Comunica\c{c}\~ao de rede em \textbf{QThread} separada
+    \item 14 eventos tipados via \textbf{pyqtSignal}
+    \item Entry point: \texttt{gui/main.py}
+  \end{itemize}
+  \vfill
+  \begin{block}{Arquivos}
+    \texttt{src/client/gui/} (JanelaPrincipal, Widgets, Di\'alogos, Estilo) \\
+    \texttt{src/client/controllers/} (ControladorCliente, OuvinteThread)
+  \end{block}
+\end{frame}
+
+\begin{frame}{Arquitetura MVC}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={rectangle, draw, rounded corners, minimum width=2.5cm, minimum height=0.7cm, align=center, font=\small},
+    arrow/.style={->, thick}
+  ]
+    \node[box, fill=red!20] (view) at (0,1.5) {View\\JanelaPrincipal};
+    \node[box, fill=blue!20] (ctrl) at (-3,0) {Controller\\Controlador};
+    \node[box, fill=green!20] (model) at (3,0) {Model\\Fazendeiro};
+    \node[box, fill=yellow!20] (thread) at (5.5,1.5) {QThread\\Ouvinte};
+    \draw[arrow] (view) -- node[above,font=\tiny] {a\c{c}\~oes UI} (ctrl);
+    \draw[arrow] (ctrl) -- node[above,font=\tiny] {comandos} (model);
+    \draw[arrow] (model) -- node[right,font=\tiny] {TCP} (thread);
+    \draw[arrow] (thread) -- node[above,font=\tiny] {signals} (view);
+  \end{tikzpicture}
+  \end{center}
+  \begin{description}[\textbf{Thread:}]
+    \item[\textbf{Model:}] \texttt{ClienteFazenda + TCPCliente} -- estado de rede e serializa\c{c}\~ao
+    \item[\textbf{View:}] \texttt{JanelaPrincipal} -- 7 widgets + 2 di\'alogos
+    \item[\textbf{Controller:}] \texttt{ControladorCliente} -- traduz eventos UI $\leftrightarrow$ rede
+    \item[\textbf{Thread:}] \texttt{OuvinteThread(QThread)} -- 14 signals tipados, bloqueia em \texttt{recv()}
+  \end{description}
+\end{frame}
+
+\begin{frame}{JanelaPrincipal e Widgets}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{9cm}}
+    \toprule
+    \textbf{Componente} & \textbf{Fun\c{c}\~ao} \\
+    \midrule
+    \texttt{JanelaPrincipal} & Orquestra todos os widgets e gerencia layout \\
+    \texttt{WidgetHUD} & Timer regressivo, barras de progresso, nome da temporada \\
+    \texttt{WidgetMapa} & Grade 20$\times$20 clic\'avel com cores por bioma/cultura \\
+    \texttt{WidgetAcoes} & Sele\c{c}\~ao de a\c{c}\~ao (preparar/plantar/colher) e tipo de semente \\
+    \texttt{WidgetEstoque} & Contadores de sementes dispon\'iveis no servidor \\
+    \texttt{WidgetChat} & Chat entre jogadores com hist\'orico \\
+    \texttt{WidgetLog} & Log de eventos e respostas do servidor \\
+    \texttt{WidgetPlacar} & Progresso da temporada: meta vs coletado \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Di\'alogos}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{DialogConexao}
+    \begin{itemize}
+      \item Descoberta UDP de servidores na LAN
+      \item Escuta broadcasts por 3 segundos
+      \item Lista servidores encontrados
+      \item Fallback: conex\~ao manual por IP
+    \end{itemize}
+    \column{0.48\textwidth}
+    \textbf{DialogTutorial}
+    \begin{itemize}
+      \item Explica mec\^anicas de cada temporada
+      \item Mostra culturas dispon\'iveis
+      \item Instru\c{c}\~oes de plantio e colheita
+    \end{itemize}
+  \end{columns}
+  \vfill
+  \textbf{Estilo:} \texttt{estilos.py} define cores, fontes e espa\c{c}amento consistente em toda a interface.
+\end{frame}
+
+\begin{frame}[fragile, shrink=20]{OuvinteThread -- QThread com Signals}
+  \begin{columns}
+    \column{0.48\textwidth}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\footnotesize]
+class OuvinteThread(QThread):
+    sinal_mapa_completo = pyqtSignal(list)
+    sinal_celula_atualizada = pyqtSignal(int,int,int)
+    sinal_resposta_sistema = pyqtSignal(str,str,object)
+    sinal_chat_recebido = pyqtSignal(str,str)
+    sinal_desconectado = pyqtSignal()
+    sinal_inicio_temporada = pyqtSignal(dict)
+    sinal_tick_timer = pyqtSignal(int)
+    sinal_estoque = pyqtSignal(dict)
+    sinal_progresso = pyqtSignal(dict,dict)
+    sinal_cultura_pronta = pyqtSignal(int,int,int)
+    sinal_posicao = pyqtSignal(int,str,int,int)
+    sinal_vitoria = pyqtSignal(int)
+    sinal_derrota = pyqtSignal(int)
+    sinal_aviso_gelo = pyqtSignal(int,int,int)
+\end{lstlisting}
+    \column{0.48\textwidth}
+    \textbf{Fluxo:}
+    \begin{enumerate}
+      \item \texttt{recv()} bloqueia at\'e receber JSON
+      \item Desserializa e identifica \texttt{tipo}
+      \item Emite signal tipado correspondente
+      \item Widget na thread principal recebe via \texttt{signal.connect(slot)}
+      \item UI atualizada sem bloquear
+    \end{enumerate}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Fluxo de Eventos na GUI}
+  \begin{enumerate}
+    \item Usu\'ario clica no \texttt{WidgetMapa} (ex.: pos (5,10))
+    \item \texttt{JanelaPrincipal} detecta clique e chama \texttt{ControladorCliente}
+    \item Controller converte em comando: \texttt{PLANTAR\{semente=3,x=5,y=10\}}
+    \item \texttt{ClassFazendeiro.solicita\_plantar()} serializa e envia via TCP
+    \item Servidor processa e retorna \texttt{RESPOSTA} + broadcast
+    \item \texttt{OuvinteThread} recebe, emite \texttt{sinal\_resposta\_sistema}
+    \item \texttt{WidgetLog} exibe ``Plantio realizado''; \texttt{WidgetMapa} atualiza c\'elula
+  \end{enumerate}
+  \vfill
+  \begin{exampleblock}{Benef\'icio do MVC + QThread}
+    UI nunca bloqueia. Rede roda em paralelo. Signals garantem thread safety.
+  \end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Controller -- ControladorCliente}
+  \begin{itemize}
+    \item Traduz eventos da interface em comandos de rede
+    \item Gerencia estado local da interface (cultura selecionada, a\c{c}\~ao ativa)
+    \item Conecta signals da \texttt{OuvinteThread} aos slots da \texttt{JanelaPrincipal}
+  \end{itemize}
+  \vfill
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\footnotesize]
+class ControladorCliente:
+    def __init__(self, view, model, thread):
+        self.view = view
+        self.model = model
+        # Conecta signals da thread aos slots da view
+        thread.sinal_celula_atualizada.connect(
+            view.atualizar_celula)
+        thread.sinal_chat_recebido.connect(
+            view.adicionar_mensagem_chat)
+        thread.sinal_desconectado.connect(
+        view.on_desconectado)
+        # ...
+\end{lstlisting}
+\end{frame}
+
+\section{Descoberta de Servidor}
+
+\begin{frame}{Descoberta de Servidor -- Motiva\c{c}\~ao}
+  \begin{itemize}
+    \item Como o cliente encontra o servidor na rede?
+    \item Duas abordagens:
+  \end{itemize}
+  \vfill
+  \begin{columns}
+    \column{0.48\textwidth}
+    \begin{block}{Manual}
+      Usu\'ario digita o IP do servidor como argumento \\
+      \texttt{python3 mainCliente.py 192.168.1.10}
+    \end{block}
+    \column{0.48\textwidth}
+    \begin{block}{Autom\'atica (UDP)}
+      Servidor anuncia presen\c{c}a via broadcast \\
+      Cliente escuta e descobre automaticamente
+    \end{block}
+  \end{columns}
+  \vfill
+  \begin{exampleblock}{Conceito de SD}
+    Service Discovery \'e um mecanismo cl\'assico para localiza\c{c}\~ao de servi\c{c}os em redes locais (ex.: DHCP, UPnP, mDNS).
+  \end{exampleblock}
+\end{frame}
+
+\begin{frame}{UDP vs TCP na Descoberta}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{4cm}>{\raggedright\arraybackslash}p{4cm}>{\raggedright\arraybackslash}p{4cm}}
+    \toprule
+    \textbf{Caracter\'istica} & \textbf{UDP (descoberta)} & \textbf{TCP (jogo)} \\
+    \midrule
+    Confiabilidade & N\~ao confi\'avel & Confi\'avel \\
+    Ordena\c{c}\~ao & N\~ao ordenado & Ordenado \\
+    Conex\~ao & Sem conex\~ao & Orientado a conex\~ao \\
+    Broadcast & Sim (nativo) & N\~ao \\
+    Uso no TP & An\'uncio peri\'odico (2s) & Toda comunica\c{c}\~ao do jogo \\
+    \bottomrule
+  \end{tabular}
+  \vfill
+  \textbf{Padr\~ao:} UDP para localiza\c{c}\~ao, TCP para dados. Mesmo princ\'ipio de DHCP, SIP, jogos online.
+\end{frame}
+
+\begin{frame}[fragile, shrink=12]{Servidor -- AnunciadorUDP}
+  \begin{itemize}
+    \item Thread daemon que transmite a cada 2 segundos
+    \item Broadcast na porta 37020
+    \item Mensagem JSON com tipo, nome do mundo e porta TCP
+  \end{itemize}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\scriptsize]
+class ClassAnunciadorUDP:
+    def iniciar(self):
+        self.sock = socket.socket(
+            socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setsockopt(
+            socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self.rodando = True
+        thread = threading.Thread(target=self._loop)
+        thread.daemon = True
+        thread.start()
+
+    def _loop(self):
+        msg = json.dumps({
+            "tipo": "GARDEN_SERVER",
+            "nome": "Mundo da Fazenda",
+            "porta": 12345
+        }).encode()
+        while self.rodando:
+            self.sock.sendto(
+                msg, ("<broadcast>", 37020))
+            time.sleep(2)
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile, shrink=12]{Cliente -- DialogConexao}
+  \begin{itemize}
+    \item Abre socket UDP na porta 37020
+    \item Configura timeout de 3 segundos
+    \item Escuta por mensagens \texttt{GARDEN\_SERVER}
+    \item Exibe servidores encontrados em lista
+    \item Fallback: \texttt{localhost:12345}
+  \end{itemize}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\footnotesize]
+sock = socket.socket(
+    socket.AF_INET, socket.SOCK_DGRAM)
+sock.settimeout(3.0)
+sock.bind(("", 37020))
+servidores = []
+try:
+    while True:
+        data, addr = sock.recvfrom(1024)
+        info = json.loads(data.decode())
+        if info.get("tipo") == "GARDEN_SERVER":
+            servidores.append((addr[0], info["porta"]))
+except socket.timeout:
+    pass  # fim da escuta
+\end{lstlisting}
+\end{frame}
+
+\section{Temporadas}
+
+\begin{frame}{Ciclo de Temporadas}
+  \footnotesize
+  \begin{tabular}{cclc}
+    \toprule
+    \textbf{\#} & \textbf{Nome} & \textbf{Culturas} & \textbf{Dura\c{c}\~ao} \\
+    \midrule
+    1 & Primavera & Trigo, Arroz, Cana & 180s \\
+    2 & Ver\~ao & + Milho & 150s \\
+    3 & Outono & + Batata & 120s \\
+    4 & Inverno & + Tomate + Geada & 90s \\
+    \bottomrule
+  \end{tabular}
+  \vfill
+  \textbf{Mec\^anica:}
+  \begin{itemize}
+    \item Demanda \textbf{multiplicada} pelo n\'umero de jogadores conectados
+    \item Timer regressivo de 1s com \texttt{threading.Timer} recursivo
+    \item Vit\'oria: meta atingida $\rightarrow$ pr\'oxima temporada (5s)
+    \item Derrota: timer zera $\rightarrow$ mesma temporada recome\c{c}a (5s)
+    \item Inverno: \textbf{geada} a cada 30s destr\'oi cultura aleat\'oria
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Mec\^anica de Demanda}
+  \begin{itemize}
+    \item Cada temporada define uma demanda de colheita
+    \item Exemplo (Primavera, 2 jogadores):
+  \end{itemize}
+  \vfill
+  \footnotesize
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Cultura} & \textbf{Demanda base} & \textbf{Com 2 jogadores} \\
+    \midrule
+    Trigo (ID 3) & 6 & 12 \\
+    Arroz (ID 4) & 3 & 6 \\
+    Cana (ID 5) & 5 & 10 \\
+    \bottomrule
+  \end{tabular}
+  \vfill
+  \begin{itemize}
+    \item Progresso \'e monitorado via \texttt{ATUALIZAR\_PROGRESSO}
+    \item Broadcast peri\'odico mant\'em clientes sincronizados
+    \item Quando \texttt{progresso >= demanda} $\rightarrow$ vit\'oria
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile, shrink=15]{ClassTemporada -- Implementa\c{c}\~ao}
+\begin{lstlisting}[style=pycode, basicstyle=\ttfamily\footnotesize]
+class ClassTemporada:
+    def __init__(self):
+        self.temporada_atual = 0
+        self.timer = None
+        self.restante = 0
+        self.progresso = {}
+        self.demanda = {}
+
+    def iniciar_temporada(self, numero):
+        self.temporada_atual = numero
+        self.restante = DURACAO[numero]
+        self.demanda = self._gerar_demanda(numero)
+        self.progresso = {c: 0 for c in self.demanda}
+        self._iniciar_timer()
+
+    def _tick(self):
+        self.restante -= 1
+        if self.restante <= 0:
+            self._derrota()
+        elif self._meta_atingida():
+            self._vitoria()
+        else:
+            threading.Timer(1, self._tick).start()
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Evento de Geada (Inverno)}
+  \begin{itemize}
+    \item Exclusivo da temporada 4 (Inverno)
+    \item A cada 30s, uma cultura aleat\'oria \'e destru\'ida
+    \item Broadcast \texttt{AVISO\_GELO\{x,y,segundos\}} antes de atingir
+    \item Jogadores t\^em 10 segundos para colher antes da geada
+  \end{itemize}
+  \vfill
+  \textbf{Fluxo da geada:}
+  \begin{enumerate}
+    \item Timer de 30s dispara
+    \item Seleciona c\'elula aleat\'oria com cultura plantada
+    \item Broadcast \texttt{AVISO\_GELO} com contagem regressiva de 10s
+    \item Ap\'os 10s: cultura destru\'ida, broadcast \texttt{CELULA} com valor original do solo
+  \end{enumerate}
+  \vfill
+  \begin{alertblock}{Impacto}
+    A geada adiciona urg\^encia e press\~ao. Jogadores precisam priorizar colheitas pr\'oximas da matura\c{c}\~ao.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Transi\c{c}\~ao entre Temporadas}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{Vit\'oria:}
+    \begin{enumerate}
+      \item Progresso atinge ou supera demanda
+      \item Broadcast \texttt{VITORIA\{temporada\}}
+      \item 5 segundos de pausa
+      \item Avan\c{c}a para pr\'oxima temporada
+      \item Broadcast \texttt{INICIO\_TEMPORADA}
+    \end{enumerate}
+    \column{0.48\textwidth}
+    \textbf{Derrota:}
+    \begin{enumerate}
+      \item Timer zera
+      \item Broadcast \texttt{DERROTA\{temporada\}}
+      \item 5 segundos de pausa
+      \item Recome\c{c}a mesma temporada
+      \item Demanda recalculada
+    \end{enumerate}
+  \end{columns}
+  \vfill
+  \begin{exampleblock}{Coopera\c{c}\~ao}
+    Jogadores precisam coordenar plantio para atingir a demanda coletiva. Se um jogador planta fora da demanda, n\~ao contribui para a meta.
+  \end{exampleblock}
+\end{frame}
+
+\section{Conceitos Avan\c{c}ados de SD}
+
+\begin{frame}{Conceitos Aplicados -- Mapa Geral}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}p{4cm}>{\raggedright\arraybackslash}p{3.5cm}}
+    \toprule
+    \textbf{Conceito} & \textbf{Implementa\c{c}\~ao} & \textbf{Arquivo} \\
+    \midrule
+    Serializa\c{c}\~ao JSON & \texttt{json.dumps/loads} + UTF-8 & \texttt{ClassControlador.py} \\
+    Framing TCP & Delimitador \texttt{\textbackslash n} & \texttt{ClassServidorTCP.py} \\
+    Thread-per-connection & \texttt{threading.Thread} por cliente & \texttt{ClassServidorTCP.py} \\
+    Broadcast & \texttt{enviar\_broadcast()} & \texttt{ClassServidorTCP.py} \\
+    Service Discovery & Broadcast UDP (porta 37020) & \texttt{ClassAnunciadorUDP.py} \\
+    Exclus\~ao m\'utua & \texttt{Lock} no estoque global & \texttt{ClassEstoque.py} \\
+    Proxy/Stub manual & \texttt{ClassFazendeiro.py} & Cliente \\
+    Despachante & \texttt{processa\_mensagem()} & \texttt{ClassControlador.py} \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[shrink=10]{M\'etricas de Qualidade Arquitetural}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}p{4cm}>{\raggedright\arraybackslash}p{3.5cm}}
+    \toprule
+    \textbf{M\'etrica} & \textbf{No Garden-in-Overworld} & \textbf{Medidor} \\
+    \midrule
+    Coes\~ao & Cada classe encapsula 1 dom\'inio (Mapa, Estoque, Temporada) & Alta \\
+    Acoplamento & Controlador depende de interfaces injetadas & Baixo \\
+    Responsabilidade \'unica & Nenhuma classe mistura rede + l\'ogica + estado & SRP v\'alido \\
+    Separa\c{c}\~ao de camadas & Rede (ServidorTCP) $\neq$ L\'ogica (Controlador) $\neq$ Estado (Mapa) & 3 camadas \\
+    Testabilidade & Cada classe pode ser testada isoladamente com mock do socket & Parcial \\
+    Reusabilidade & \texttt{ClassEstoque} (Lock) reutiliz\'avel em qualquer contexto concorrente & Alta \\
+    \bottomrule
+  \end{tabular}
+  \vfill
+  \begin{block}{Conceito}
+    \footnotesize
+    Arquiteturas \textbf{desacopladas} facilitam manuten\c{c}\~ao, teste e evolu\c{c}\~ao. Cada funcionalidade ``faz uma coisa s\'o'' e pode ser alterada sem impactar as demais.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Idempot\^encia por Opera\c{c}\~ao}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3cm}c>{\raggedright\arraybackslash}p{3cm}>{\raggedright\arraybackslash}p{3cm}}
+    \toprule
+    \textbf{Opera\c{c}\~ao} & \textbf{Idemp.?} & \textbf{Efeito da reexecu\c{c}\~ao} & \textbf{Retry seguro?} \\
+    \midrule
+    \texttt{MATRIZ} & Sim & Mesmo estado & Sim \\
+    \texttt{NICKNAME} & Sim & Sobrescreve nickname & Sim \\
+    \texttt{PREPARAR} & Sim & Solo j\'a preparado, erro & Sim \\
+    \texttt{PEGAR\_SEMENTE} & N\~ao & Retira outra semente & N\~ao \\
+    \texttt{PLANTAR} & N\~ao & C\'elula ocupada, erro & N\~ao \\
+    \texttt{COLHER} & N\~ao & ``Sem plantio'' & N\~ao \\
+    \texttt{CHAT} & N\~ao & Mensagem duplicada & N\~ao \\
+    \bottomrule
+  \end{tabular}
+  \begin{alertblock}{Problema do PLANTAR}
+    Resposta \texttt{OK} perdida na rede: cliente n\~ao sabe se plantou. Reenvio $\rightarrow$ erro ``ocupado''. Solu\c{c}\~ao: idempotency key.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Transpar\^encia em Sistemas Distribu\'idos}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3cm}c>{\raggedright\arraybackslash}p{7.5cm}}
+    \toprule
+    \textbf{Tipo} & \textbf{Status} & \textbf{No TP} \\
+    \midrule
+    Localiza\c{c}\~ao & Parcial & UDP discovery autom\'atico ou IP manual \\
+    Concorr\^encia & Parcial & Threads compartilham matriz; sem lock (risco documentado) \\
+    Falha & Baixa & Apenas \texttt{recv()} vazio; sem timeout/sinal de vida \\
+    Replica\c{c}\~ao & N\~ao aplicada & Estado \'unico centralizado, sem r\'eplicas \\
+    Migra\c{c}\~ao & N\~ao aplicada & Cliente n\~ao migra entre servidores \\
+    Desempenho & Parcial & Thread-per-connection + GIL do CPython \\
+    Escalabilidade & N\~ao aplicada & Limite de 4 jogadores, servidor \'unico \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Exce\c{c}\~oes Distribu\'idas e Valida\c{c}\~ao de Entrada}
+  \begin{itemize}
+    \item Diferen\c{c}a entre chamadas locais e distribu\'idas: falhas e entradas malformadas
+    \item Tratamento implementado:
+  \end{itemize}
+  \vfill
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{4cm}>{\raggedright\arraybackslash}p{4cm}>{\raggedright\arraybackslash}p{4cm}}
+    \toprule
+    \textbf{Problema} & \textbf{Tratamento} & \textbf{Resposta} \\
+    \midrule
+    JSON inv\'alido & \texttt{try/except json.JSONDecodeError} & \texttt{ERRO: mensagem inv\'alida} \\
+    Comando desconhecido & \texttt{if/elif} sem match & \texttt{ERRO: comando desconhecido} \\
+    Par\^ametros ausentes & \texttt{dados.get()} com padr\~ao & \texttt{ERRO: par\^ametros inv\'alidos} \\
+    Socket fechado & \texttt{if not dados: break} & Desconex\~ao silenciosa \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Consist\^encia e Ordena\c{c}\~ao de Eventos}
+  \begin{itemize}
+    \item \textbf{Modelo:} consist\^encia forte no servidor, eventual nos clientes
+    \item Servidor \'e autoritativo: toda escrita passa por ele
+    \item Ordena\c{c}\~ao garantida pelo TCP (por conex\~ao) + processamento sequencial em cada thread
+    \item Sem rel\'ogios l\'ogicos ou vetoriais
+  \end{itemize}
+
+  \vfill
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{CAP Trade-off: CP}
+    \begin{itemize}
+      \item \textbf{Consist\^encia:} servidor n\~ao aceita escritas conflitantes
+      \item \textbf{Toler\^ancia a Parti\c{c}\~ao:} opera mesmo com falhas de rede
+      \item \textbf{Disponibilidade:} sacrificada (SPOF)
+    \end{itemize}
+    \column{0.48\textwidth}
+    \textbf{Janela de Inconsist\^encia}
+    \begin{itemize}
+      \item Entre a\c{c}\~ao do cliente e o broadcast
+      \item Milissegundos (rede local)
+      \item Sem lock na matriz: race condition poss\'ivel
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{RMI vs Sockets (Comparativo Conceitual)}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3cm}>{\raggedright\arraybackslash}p{4.5cm}>{\raggedright\arraybackslash}p{4.5cm}}
+    \toprule
+    \textbf{Aspecto} & \textbf{RMI (ideal)} & \textbf{Garden-in-Overworld} \\
+    \midrule
+    Interface remota & Formal (IDL/Remote) & JSON ad-hoc (contrato impl\'icito) \\
+    Stub/proxy & Gerado automaticamente & Manual (montagem/envio de JSON) \\
+    Sincroniza\c{c}\~ao & Bibliotecas auxiliam & \texttt{threading.Lock} manual \\
+    Transpar\^encia localiza\c{c}\~ao & Maior & Parcial (host/porta) \\
+    Tratamento de falhas & Timeouts/retries & Apenas \texttt{recv()} vazio \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{M\'odulos de Middleware}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{2.5cm}c>{\raggedright\arraybackslash}p{8.5cm}}
+    \toprule
+    \textbf{M\'odulo} & \textbf{Status} & \textbf{Equivalente no Garden-in-Overworld} \\
+    \midrule
+    Comunica\c{c}\~ao & Manual & \texttt{ClassServidorTCP.py / ClassTCPCliente.py}: sockets TCP, JSON, framing \\
+    Refer\^encia & Impl\'icito & \texttt{GerenciadorUsers}: \texttt{id\_jogador} $\leftrightarrow$ \texttt{User} via slots \\
+    Ativa\c{c}\~ao & Manual & \texttt{threading.Thread()} --- thread-per-connection \\
+    Invoca\c{c}\~ao & Manual & \texttt{ControladorFazenda.processa\_mensagem()}: dispatch JSON \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\section{Limita\c{c}\~oes e Trabalhos Futuros}
+
+\begin{frame}{Race Condition na Matriz}
+  \begin{itemize}
+    \item \textbf{Problema:} matriz do mapa sem \texttt{Lock} -- principal fragilidade
+    \item Duas threads podem escrever na mesma c\'elula simultaneamente
+    \item Broadcast inconsistente: thread A planta trigo, thread B sobrescreve com arroz
+    \item GIL do CPython reduz o risco, mas n\~ao elimina
+  \end{itemize}
+  \vfill
+  \textbf{Estado atual:}
+  \begin{itemize}
+    \item Estoque: protegido por \texttt{Lock} (\texttt{ClassEstoque.py})
+    \item Timers: protegidos por \texttt{\_lock\_timers} (\texttt{ControladorFazenda})
+    \item Matriz: \textbf{sem prote\c{c}\~ao}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Falhas de Rede}
+  \begin{itemize}
+    \item \textbf{Sem timeout:} cliente zumbi ocupa slot indefinidamente
+    \item \texttt{recv()} bloqueia at\'e receber dados ou conex\~ao fechar
+    \item N\~ao h\'a heartbeat ou sinal de vida
+    \item Servidor s\'o detecta desconex\~ao quando \texttt{recv()} retorna vazio
+  \end{itemize}
+  \vfill
+  \textbf{Cen\'ario problem\'atico:}
+  \begin{enumerate}
+    \item Cliente conecta e envia \texttt{NICKNAME}
+    \item Cliente para de enviar dados (mas mant\'em conex\~ao aberta)
+    \item Slot ocupado permanentemente
+    \item Nenhum outro jogador pode usar aquele slot
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Persist\^encia e Seguran\c{c}a}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{Sem Persist\^encia}
+    \begin{itemize}
+      \item Estado do jogo em mem\'oria RAM
+      \item Perdido ao reiniciar servidor
+      \item N\~ao h\'a banco de dados
+      \item Jogadores perdem progresso
+    \end{itemize}
+    \column{0.48\textwidth}
+    \textbf{Sem Criptografia}
+    \begin{itemize}
+      \item Mensagens em texto plano (JSON UTF-8)
+      \item Qualquer um na LAN pode interceptar
+      \item Sem HMAC ou autentica\c{c}\~ao
+      \item NICKNAME autoinformado: sem identidade real
+    \end{itemize}
+  \end{columns}
+  \vfill
+  \begin{block}{Ponto \'Unico de Falha (SPOF)}
+    Servidor central sem replica\c{c}\~ao. Se cair, todos os clientes perdem conex\~ao e o estado \'e perdido.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Limita\c{c}\~oes de Protocolo e Testes}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{Framing por Delimitador}
+    \begin{itemize}
+      \item \texttt{\textbackslash n} como separador
+      \item Simples, mas fr\'agil
+      \item JSON com quebra de linha quebra o protocolo
+      \item Alternativa: framing por tamanho (header bin\'ario)
+    \end{itemize}
+    \column{0.48\textwidth}
+    \textbf{Testes Apenas em LAN}
+    \begin{itemize}
+      \item Sem valida\c{c}\~ao com alta lat\^encia
+      \item Sem perda de pacotes realista
+      \item 4 jogadores: carga baixa
+      \item Sem cen\'arios de Internet-scale
+    \end{itemize}
+  \end{columns}
+  \vfill
+  \begin{itemize}
+    \item \textbf{Sem idempot\^encia:} PLANTAR/COLHER n\~ao podem ser reenviados com seguran\c{c}a
+    \item \textbf{Acoplamento:} recebimento, parsing, dispatch e execu\c{c}\~ao no mesmo m\'etodo
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Sincroniza\c{c}\~ao e Concorr\^encia}
+  \begin{description}[Idempotency Keys:]
+    \item[Lock na Matriz:] \texttt{threading.Lock} para proteger opera\c{c}\~oes de escrita na matriz, eliminando race conditions
+    \item[Timeout nos Sockets:] \texttt{socket.settimeout()} para detectar clientes inativos e liberar slots automaticamente
+    \item[Heartbeat:] Sinal peri\'odico cliente $\rightarrow$ servidor para confirmar que a conex\~ao ainda est\'a ativa
+    \item[Idempotency Keys:] Identificador \'unico por requisi\c{c}\~ao para permitir retry seguro de PLANTAR/COLHER
+  \end{description}
+\end{frame}
+
+\begin{frame}{Persist\^encia e Robustez}
+  \begin{description}[Testes em Nuvem:]
+    \item[SQLite:] Persistir estado do jogo (matriz, estoque, temporada) em disco para recupera\c{c}\~ao ap\'os reinicializa\c{c}\~ao
+    \item[Framing por Tamanho:] Header bin\'ario com n\'umero de bytes, eliminando depend\^encia de delimitador
+    \item[Separa\c{c}\~ao de Responsabilidades:] Refatorar \texttt{processa\_mensagem()} em m\'odulos independentes (recep\c{c}\~ao, parsing, dispatch, execu\c{c}\~ao)
+    \item[Testes em Nuvem:] Implantar servidor em AWS/GCP e validar comportamento com lat\^encia real
+  \end{description}
+\end{frame}
+
+\begin{frame}{Seguran\c{c}a e Deploy}
+  \begin{description}[Autentica\c{c}\~ao de Jogadores:]
+    \item[TLS/SSL:] Criptografar o canal de comunica\c{c}\~ao com certificados para proteger dados em tr\^ansito
+    \item[Autentica\c{c}\~ao:] Sistema de login com senha para impedir acesso n\~ao autorizado
+    \item[Interface Web:] Alternativa \`a GUI PyQt6 usando WebSockets + React para acesso via navegador
+    \item[Logs e Monitoramento:] Sistema de logging estruturado para depura\c{c}\~ao e an\'alise de desempenho
+  \end{description}
+\end{frame}
+
+\begin{frame}{Evolu\c{c}\~ao da Arquitetura}
+  \begin{itemize}
+    \item \textbf{Worker Pool:} Substituir thread-per-connection por pool de threads para melhor escalabilidade
+    \item \textbf{Async IO:} Usar \texttt{asyncio} com \texttt{asyncio.start\_server()} para E/S n\~ao bloqueante
+    \item \textbf{Replica\c{c}\~ao:} M\'ultiplos servidores com sincroniza\c{c}\~ao de estado para eliminar SPOF
+    \item \textbf{Balanceamento:} Proxy reverso para distribuir clientes entre m\'ultiplos servidores
+    \item \textbf{ADO (Active Distributed Object):} Migrar para um modelo onde cada jogador \'e um objeto distribu\'ido ativo
+  \end{itemize}
+\end{frame}
+
+\section{Execu\c{c}\~ao}
+
+\begin{frame}{Pr\'e-requisitos e Instala\c{c}\~ao}
+  \begin{block}{Pr\'e-requisitos}
+    \begin{itemize}
+      \item Python 3.10+ (testado em Ubuntu 22.04)
+      \item \texttt{make} (para comandos do Makefile)
+      \item Docker (opcional, para servidor conteinerizado)
+    \end{itemize}
+  \end{block}
+  \vfill
+  \begin{block}{Instala\c{c}\~ao}
+    \texttt{make install} -- cria \texttt{.venv} e instala PyQt6 e depend\^encias
+  \end{block}
+  \vfill
+  \begin{block}{Docker (alternativa)}
+    \texttt{docker compose build} -- constr\'oi imagem \texttt{garden-server}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Execu\c{c}\~ao do Servidor}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{Nativo:}
+    \begin{block}{}
+      \texttt{make NS}
+    \end{block}
+    Servidor escuta em \texttt{0.0.0.0:12345}
+    \vfill
+    \textbf{Flags:}
+    \begin{itemize}
+      \item Mostra mapa colorido no terminal
+      \item Log de conex\~oes e comandos
+    \end{itemize}
+    \column{0.48\textwidth}
+    \textbf{Docker:}
+    \begin{block}{}
+      \texttt{docker compose up -d}
+    \end{block}
+    Servidor em background
+    \vfill
+    \begin{block}{}
+      \texttt{docker compose down}
+    \end{block}
+    Derruba o container
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Execu\c{c}\~ao do Cliente}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{Cliente GUI:}
+    \begin{block}{}
+      \texttt{make NC}
+    \end{block}
+    Interface PyQt6 com descoberta UDP autom\'atica
+    \vfill
+    \textbf{Cliente Terminal:}
+    \begin{block}{}
+      \texttt{python3 src/client/mainCliente.py <IP>}
+    \end{block}
+    \column{0.48\textwidth}
+    \textbf{Testes:}
+    \begin{block}{}
+      \texttt{make 5C}
+    \end{block}
+    5 terminais (s\'o 4 conectam)
+    \vfill
+    \begin{block}{}
+      \texttt{make all\_local}
+    \end{block}
+    Servidor + 5 tentativas; 5\''a rejeitado
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Execu\c{c}\~ao Multi-m\'aquina}
+  \begin{itemize}
+    \item Clientes em m\'aquinas distintas na mesma LAN
+    \item Cliente aceita IP do servidor como argumento
+  \end{itemize}
+  \vfill
+  \begin{exampleblock}{Comando}
+    \texttt{python3 src/client/mainCliente.py 192.168.1.10}
+  \end{exampleblock}
+  \vfill
+  \begin{itemize}
+    \item Descoberta UDP opcional: cliente pode detectar servidor automaticamente
+    \item Fallback: \texttt{localhost:12345} se nenhum servidor encontrado
+  \end{itemize}
+  \vfill
+  \begin{alertblock}{Importante}
+    Portas 12345 (TCP) e 37020 (UDP) precisam estar liberadas no firewall.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Comandos do Makefile}
+  \footnotesize
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{Comando} & \textbf{Efeito} \\
+    \midrule
+    \texttt{make install} & Cria \texttt{.venv} e instala PyQt6 \\
+    \texttt{make NS} & Inicia servidor nativo \\
+    \texttt{make NC} & Inicia cliente GUI \\
+    \texttt{make 5C} & 5 terminais cliente (limite 4) \\
+    \texttt{make all\_local} & Servidor + 5 clientes \\
+    \texttt{make KS} & Encerra servidor (\texttt{SIGINT}) \\
+    \texttt{make clean} & Remove \texttt{\_\_pycache\_\_} e \texttt{.venv} \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Demonstra\c{c}\~ao -- Inicializa\c{c}\~ao e Conex\~ao}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{Inicializa\c{c}\~ao do Servidor (\texttt{make NS})}
+      \centering
+      \includegraphics[width=0.75\linewidth]{Artefatos/server_init.png}
+    \end{block}
+    \footnotesize Servidor gera o mapa ASCII no console e inicia o anúncio de sua presença na rede local via broadcast UDP na porta 37020.
+    
+    \column{0.48\textwidth}
+    \begin{block}{Descoberta pelo Cliente (\texttt{make NC})}
+      \centering
+      \includegraphics[width=0.75\linewidth]{Artefatos/client_conn.png}
+    \end{block}
+    \footnotesize Cliente GUI escuta os anúncios UDP locais, lista os servidores disponíveis e solicita o nickname para a conexão.
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Demonstra\c{c}\~ao -- Logs de Conex\~ao e A\c{c}\~ao no Servidor}
+  \begin{columns}[T]
+    \column{0.58\textwidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{Artefatos/server_conn.png}
+    
+    \column{0.38\textwidth}
+    \begin{block}{Logs do Servidor}
+      \footnotesize
+      Acompanhamento das ações em tempo real:
+      \begin{itemize}
+        \item Identificação do endereço IP e porta do cliente.
+        \item Registro de novo agricultor conectando-se ao slot do jogo.
+        \item Recebimento e processamento dos comandos em formato JSON (ex: \texttt{CURSOR}, \texttt{PREPARAR}).
+      \end{itemize}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Demonstra\c{c}\~ao -- Interface Principal da Gameplay}
+  \centering
+  \includegraphics[width=0.8\linewidth]{Artefatos/gameplay_start.png}
+  
+  \vspace{0.1cm}
+  \footnotesize Visão geral do cliente no início da Temporada 1 (Primavera), mostrando o mapa quadriculado da fazenda, estoque global, painel de ações/sementes e logs detalhados de rede no painel esquerdo.
+\end{frame}
+
+\begin{frame}{Demonstra\c{c}\~ao -- Cultivo e Din\^amica de Temporadas}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{Ciclo de Cultivo Ativo}
+      \centering
+      \includegraphics[width=0.8\linewidth]{Artefatos/gameplay_active.png}
+    \end{block}
+    \footnotesize Visualização das plantações crescendo no mapa (trigo, arroz, cana) e o status do estoque global.
+    
+    \column{0.48\textwidth}
+    \begin{block}{Novas Regras da Temporada (Ver\~ao)}
+      \centering
+      \includegraphics[width=0.8\linewidth]{Artefatos/gameplay_tutorial.png}
+    \end{block}
+    \footnotesize Notificação tutorial informando novas regras ao mudar de estação, como tempo reduzido e inclusão de milho.
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Demonstra\c{c}\~ao -- Protocolo e Fluxo de Mensagens}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{Comandos de Gameplay}
+      \centering
+      \includegraphics[width=0.8\linewidth]{Artefatos/gameplay_commands.png}
+    \end{block}
+    \footnotesize Mensagens trocadas no final do ciclo, registrando comandos como \texttt{COLHER} e o status \texttt{VITORIA} ou \texttt{DERROTA}.
+    
+    \column{0.48\textwidth}
+    \begin{block}{Sincroniza\c{c}\~ao via Sockets}
+      \centering
+      \includegraphics[width=0.8\linewidth]{Artefatos/gameplay_tick.png}
+    \end{block}
+    \footnotesize Loop constante de mensagens \texttt{TICK\_TIMER} enviadas pelo servidor a cada segundo para atualizar o tempo restante do jogo.
+  \end{columns}
+\end{frame}
+
+\section{Evolu\c{c}\~ao e Conclus\~ao}
+
+\begin{frame}{Estrat\'egia de Branches}
+  \begin{itemize}
+    \item Duas branches principais de desenvolvimento
+    \item \texttt{feature/front-end}: interface e deploy
+    \item \texttt{feature/middleware}: comunica\c{c}\~ao e protocolo
+    \item Merge eventual para \texttt{main} ao final do ciclo
+  \end{itemize}
+  \vfill
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={rectangle, draw, rounded corners, minimum width=2.5cm, minimum height=0.6cm, align=center, font=\small},
+    arrow/.style={->, thick}
+  ]
+    \node[box, fill=green!20] (dev) at (-2,0) {main};
+    \node[box, fill=blue!20] (front) at (-2,-1.2) {feature/front-end};
+    \node[box, fill=red!20] (mw) at (2,-1.2) {feature/middleware};
+    \draw[arrow] (dev) -- (front);
+    \draw[arrow] (dev) -- (mw);
+    \draw[arrow] (front) -- node[font=\tiny] {merge} (2,0);
+    \draw[arrow] (mw) -- node[font=\tiny] {merge} (2,0);
+  \end{tikzpicture}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Feature/Front-End}
+  \begin{block}{Foco}
+    Interface gr\'afica PyQt6, Docker, Makefile, deploy
+  \end{block}
+  \vfill
+  \textbf{Per\'odo:} 21/05 -- 24/05
+  \vfill
+  \textbf{Entregas:}
+  \begin{itemize}
+    \item Telas PyQt6 com padr\~ao MVC completo
+    \item 7 widgets especializados + 2 di\'alogos
+    \item OuvinteThread com 14 signals tipados
+    \item Descoberta UDP autom\'atica (DialogConexao)
+    \item Docker e Docker Compose
+    \item Makefile (NS, NC, 5C, KS, all\_local)
+    \item Documenta\c{c}\~ao (doc.tex, README)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Feature/Middleware}
+  \begin{block}{Foco}
+    Camada de comunica\c{c}\~ao, protocolo, concorr\^encia
+  \end{block}
+  \vfill
+  \textbf{Per\'odo:} Atual
+  \vfill
+  \textbf{Entregas:}
+  \begin{itemize}
+    \item Sockets TCP + JSON + framing por \texttt{\textbackslash n}
+    \item Thread-per-connection no servidor
+    \item Broadcast de eventos para todos os clientes
+    \item Service discovery UDP (AnunciadorUDP)
+    \item Serializa\c{c}\~ao e representa\c{c}\~ao externa
+    \item Proxy/Stub manual (ClassFazendeiro)
+    \item Despachante de comandos (ClassControlador)
+    \item Slide da apresenta\c{c}\~ao
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Commits e Hist\'orico}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{9cm}}
+    \toprule
+    \textbf{Data} & \textbf{Principais Commits} \\
+    \midrule
+    22/04 & Estrutura inicial: servidor TCP, cliente, mapa \\
+    28/04 & Threads no servidor, broadcast, timer crescimento \\
+    05/05 & Refactor controlador, valida\c{c}\~oes de plantio \\
+    11/05 & Cliente terminal funcional, loop de comandos \\
+    14/05 & In\'icio refactor MVC, separa\c{c}\~ao de camadas \\
+    16/05 & Mensagens de erro, tratamento de exce\c{c}\~oes \\
+    18/05 & GUI PyQt6 completa: JanelaPrincipal, widgets \\
+    19/05 & Temporadas, estoque, timer, l\'ogica do jogo \\
+    21/05 & Docker, Makefile, documenta\c{c}\~ao (feature/front-end) \\
+    22/05 & Descoberta UDP, refactor OuvinteThread \\
+    23/05 & Ajustes finais GUI, corre\c{c}\~ao de bugs \\
+    24/05 & doc.tex completo, merge para feature/front-end \\
+    Atual & slide.tex, expans\~ao middleware \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Organiza\c{c}\~ao do Reposit\'orio}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{4cm}>{\raggedright\arraybackslash}p{8.5cm}}
+    \toprule
+    \textbf{Diret\'orio} & \textbf{Conte\'udo} \\
+    \midrule
+    \texttt{src/server/} & Servidor TCP, controlador, mapa, estoque, temporada, UDP \\
+    \texttt{src/client/} & Cliente TCP, proxy manual, ouvinte, mapa local \\
+    \texttt{src/client/gui/} & Janela principal, widgets, di\'alogos, estilo \\
+    \texttt{src/client/controllers/} & Controlador MVC, OuvinteThread \\
+    \texttt{Artefatos/} & Diagramas, assets \\
+    \texttt{Makefile} & Comandos: \texttt{NS}, \texttt{NC}, \texttt{5C}, \texttt{KS}, \texttt{all\_local} \\
+    \texttt{docker-compose.yml} & Servidor conteinerizado \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Conclus\~ao -- O que foi constru\'ido}
+  \begin{itemize}
+    \item Sistema distribu\'ido C/S com \textbf{sockets TCP puros} (sem RMI/CORBA)
+    \item Todos \textbf{RF01--RF08} implementados + funcionalidades adicionais
+    \item Protocolo JSON com framing por delimitador
+    \item Thread-per-connection + broadcast de eventos
+    \item GUI PyQt6 com padr\~ao MVC, QThread e 14 signals
+    \item Service discovery UDP para localiza\c{c}\~ao autom\'atica
+    \item Docker e Makefile para deploy simplificado
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Desafios Enfrentados}
+  \begin{columns}
+    \column{0.48\textwidth}
+    \textbf{Desafios T\'ecnicos}
+    \begin{itemize}
+      \item Framing TCP: bufferiza\c{c}\~ao e delimita\c{c}\~ao
+      \item Thread safety: Lock no estoque, race na matriz
+      \item E/S bloqueante: QThread para n\~ao travar a UI
+      \item Serializa\c{c}\~ao manual: JSON sem IDL
+    \end{itemize}
+    \column{0.48\textwidth}
+    \textbf{Decis\~oes de Projeto}
+    \begin{itemize}
+      \item Thread-per-connection vs async
+      \item JSON vs bin\'ario/XML
+      \item UDP para descoberta + TCP para dados
+      \item MVC com signals/slots no PyQt6
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Conceitos de SD Aplicados}
+  \footnotesize
+  \begin{tabular}{>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}p{9cm}}
+    \toprule
+    \textbf{Conceito} & \textbf{Como aparece no TP} \\
+    \midrule
+    Serializa\c{c}\~ao externa & JSON para representa\c{c}\~ao de dados na rede \\
+    Framing & Delimitador \texttt{\textbackslash n} em fluxo TCP \\
+    Thread-per-connection & Uma thread por cliente no servidor \\
+    Exclus\~ao m\'utua & \texttt{Lock} no estoque global \\
+    Broadcast & Notifica\c{c}\~ao em grupo de eventos \\
+    Service discovery & UDP para localiza\c{c}\~ao de servidor \\
+    Proxy/Stub & \texttt{ClassFazendeiro} como proxy manual \\
+    Despachante & \texttt{processa\_mensagem()} para roteamento \\
+    Modelo f\'isico & \textbf{Early}: LAN, 4 clientes, 1 servidor \\
+    CAP & Consist\^encia + Toler\^ancia a Parti\c{c}\~ao (CP) \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Li\c{c}\~oes Aprendidas}
+  \begin{itemize}
+    \item Sockets TCP exigem gerenciamento manual de \textbf{tudo}: conex\~ao, framing, concorr\^encia, erros
+    \item RMI/CORBA abstraem complexidade, mas escondem detalhes importantes
+    \item Middleware manual d\'a controle total, mas aumenta carga de desenvolvimento
+    \item Thread-per-connection escala mal, mas \'e simples e did\'atico
+    \item JSON \'e suficiente para prot\'otipos, mas schema formal ajuda em sistemas maiores
+    \item Testes em LAN n\~ao capturam problemas de lat\^encia e perda de pacotes
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{C\'odigo-Fonte}
+  \begin{center}
+    \url{https://github.com/deyrik/Garden-in-Overworld}
+  \end{center}
+  \vfill
+  \begin{itemize}
+    \item Licen\c{c}a: MIT
+    \item Python 3.10+ / PyQt6
+    \item Servidor: \texttt{src/server/mainServer.py}
+    \item Cliente GUI: \texttt{src/client/gui/main.py}
+    \item Documenta\c{c}\~ao: \texttt{doc.tex}
+    \item Apresenta\c{c}\~ao: \texttt{slide.tex}
+  \end{itemize}
+\end{frame}
+
+\end{document}
