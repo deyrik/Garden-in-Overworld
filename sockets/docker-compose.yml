@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: farm_server
+    ports:
+      - "12345:12345"
+    networks:
+      - farm_network
+
+  client1:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    container_name: farm_client_1
+    depends_on:
+      - server
+    environment:
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+    network_mode: "host" # Essencial para integração nativa com o servidor X11 local
+
+networks:
+  farm_network:
+    driver: bridge
