@@ -4,12 +4,12 @@ clean:
 
 #new server:
 NS:
-	sudo docker rm -f farm_server || true
-	python src/server/mainServer.py
+	pkill -f "[m]ainServer.py" || true
+	bash -c "source .venv/bin/activate && python src/server/mainServer.py"
 
 #new client:
 NC:
-	python src/client/mainCliente.py
+	bash -c "source .venv/bin/activate && python src/client/mainCliente.py"
 
 
 #cria 4 terminais fisicamente separados e 4 clientes:
